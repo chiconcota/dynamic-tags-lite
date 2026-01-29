@@ -452,7 +452,10 @@
 
 	const DynamicLinkEdit = ({ isActive, value, onChange, contentRef }) => {
 		const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-		const [attributes, setAttributes] = useState(value.activeFormats.find(f => f.type === 'dynamic-tags-lite/dynamic-link')?.attributes || { source: '', key: '', href: '#' });
+		const [attributes, setAttributes] = useState(() => {
+			const activeFormat = value.activeFormats?.find(f => f.type === 'dynamic-tags-lite/dynamic-link');
+			return activeFormat?.attributes || { source: '', key: '', href: '#' };
+		});
 
 		// Internal state for Meta Keys
 		const [metaOptions, setMetaOptions] = useState([]);
@@ -463,7 +466,7 @@
 			setIsPopoverOpen(!isPopoverOpen);
 			if (!isPopoverOpen && isActive) {
 				// Load existing attributes if active
-				const format = value.activeFormats.find(f => f.type === 'dynamic-tags-lite/dynamic-link');
+				const format = value.activeFormats?.find(f => f.type === 'dynamic-tags-lite/dynamic-link');
 				if (format) {
 					setAttributes(format.attributes);
 				}
