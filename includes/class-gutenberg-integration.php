@@ -34,13 +34,31 @@ class Gutenberg_Integration {
 		if ( in_array( $metadata['name'], $eligible_blocks ) ) {
 			$settings['attributes']['dynamicTag'] = [
 				'type'    => 'object',
-				'default' => [ 'enable' => false, 'source' => '', 'key' => '', 'fallback' => '' ],
+				'default' => [ 
+					'enable' => false, 
+					'source' => '', 
+					'key' => '', 
+					'fallback' => '',
+					'prefix' => '',
+					'suffix' => '',
+					'dateFormat' => '',
+					'numberDecimals' => ''
+				],
 			];
 
 			if ( 'core/image' === $metadata['name'] ) {
 				$settings['attributes']['dynamicLink'] = [
 					'type'    => 'object',
-					'default' => [ 'enable' => false, 'source' => '', 'key' => '', 'fallback' => '' ],
+					'default' => [ 
+						'enable' => false, 
+						'source' => '', 
+						'key' => '', 
+						'fallback' => '',
+						'prefix' => '',
+						'suffix' => '',
+						'dateFormat' => '',
+						'numberDecimals' => ''
+					],
 				];
 			}
 		}
@@ -62,6 +80,8 @@ class Gutenberg_Integration {
 			}
 
 			if ( ! empty( $link_url ) ) {
+				$link_url = $this->apply_formatting( $link_url, $link_setting );
+
 				if ( 'core/image' === $block['blockName'] ) {
 					// Check if image is already wrapped in a link
 					if ( preg_match( '/<figure[^>]*>.*<a\s+[^>]*href=["\']([^"\']*)["\'][^>]*>.*<\/a>.*<\/figure>/is', $block_content ) ) {
@@ -96,6 +116,8 @@ class Gutenberg_Integration {
 		if ( empty( $value ) ) {
 			return $block_content;
 		}
+
+		$value = $this->apply_formatting( $value, $setting );
 
 		// Handle array values (e.g. Checkbox, Select)
 		if ( is_array( $value ) ) {
@@ -213,5 +235,40 @@ class Gutenberg_Integration {
 
 		// Default fallback for Paragraphs/Headings
 		return preg_replace( '/^(<[^>]+>)(.*)(<\/[^>]+>)$/s', '$1' . esc_html( $value ) . '$3', $content );
+	}
+
+	/**
+	 * Apply prefix, suffix, date and number formatting to a dynamic value.
+	 */
+	protected function apply_formatting( $value, $settings ) {
+		if ( empty( $value ) ) {
+			return $value;
+		}
+
+		// 1. Array Value Handling (move from render_dynamic_content if needed, but keeping it simple)
+		if ( is_array( $value ) ) {
+			$value = implode( ', ', $value );
+		}
+
+		// 2. Date Formatting
+		if ( ! empty( $settings['dateFormat'] ) ) {
+			// Try to convert to timestamp if it's not numeric
+			$timestamp = is_numeric( $value ) ? $value : strtotime( $value );
+			if ( $timestamp ) {
+				$value = wp_date( $settings['dateFormat'], $timestamp );
+			}
+		}
+
+		// 3. Number Formatting
+		if ( isset( $settings['numberDecimals'] ) && $settings['numberDecimals'] !== '' ) {
+			$decimals = intval( $settings['numberDecimals'] );
+			$value = number_format_i18n( floatval( $value ), $decimals );
+		}
+
+		// 4. Prefix & Suffix
+		$prefix = isset( $settings['prefix'] ) ? $settings['prefix'] : '';
+		$suffix = isset( $settings['suffix'] ) ? $settings['suffix'] : '';
+		
+		return $prefix . $value . $suffix;
 	}
 }

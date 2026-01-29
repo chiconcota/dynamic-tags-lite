@@ -27,7 +27,11 @@
 					enable: false,
 					source: '',
 					key: '',
-					fallback: ''
+					fallback: '',
+					prefix: '',
+					suffix: '',
+					dateFormat: '',
+					numberDecimals: ''
 				},
 			}
 		};
@@ -40,7 +44,11 @@
 					enable: false,
 					source: '',
 					key: '',
-					fallback: ''
+					fallback: '',
+					prefix: '',
+					suffix: '',
+					dateFormat: '',
+					numberDecimals: ''
 				},
 			};
 		}
@@ -62,8 +70,8 @@
 			}
 
 			// Settings
-			const dynamicTag = attributes.dynamicTag || { enable: false, source: '', key: '', fallback: '' };
-			const dynamicLink = attributes.dynamicLink || { enable: false, source: '', key: '', fallback: '' };
+			const dynamicTag = attributes.dynamicTag || { enable: false, source: '', key: '', fallback: '', prefix: '', suffix: '', dateFormat: '', numberDecimals: '' };
+			const dynamicLink = attributes.dynamicLink || { enable: false, source: '', key: '', fallback: '', prefix: '', suffix: '', dateFormat: '', numberDecimals: '' };
 
 			// UI State
 			const [isPopoverOpen, setIsPopoverOpen] = useState(false);
@@ -72,6 +80,7 @@
 			const [isLoadingKeys, setIsLoadingKeys] = useState(false);
 			const [fetchError, setFetchError] = useState(null);
 			const [keysLoaded, setKeysLoaded] = useState(false);
+			const [showAdvanced, setShowAdvanced] = useState(false);
 
 			const togglePopover = () => setIsPopoverOpen(!isPopoverOpen);
 
@@ -179,7 +188,7 @@
 			};
 
 			const removeDynamicTag = () => {
-				const empty = { enable: false, source: '', key: '', fallback: '' };
+				const empty = { enable: false, source: '', key: '', fallback: '', prefix: '', suffix: '', dateFormat: '', numberDecimals: '' };
 				if (isLinkMode) {
 					setAttributes({ dynamicLink: empty, href: '' });
 				} else {
@@ -354,6 +363,61 @@
 								value: currentSettings.fallback || '',
 								onChange: (val) => updateDynamicTag('fallback', val),
 							}),
+
+							// Advanced Formatting Toggle
+							wp.element.createElement('div', { style: { marginTop: '10px', borderTop: '1px solid #eee', paddingTop: '10px' } },
+								wp.element.createElement(Button, {
+									isLink: true,
+									onClick: () => setShowAdvanced(!showAdvanced),
+									icon: showAdvanced ? 'arrow-up-alt2' : 'arrow-down-alt2',
+									style: { width: '100%', justifyContent: 'space-between', padding: '0 5px' }
+								}, 'Advanced Settings')
+							),
+
+							showAdvanced && wp.element.createElement('div', { style: { marginTop: '10px', padding: '10px', background: '#f9f9f9', borderRadius: '4px' } },
+
+								// Prefix/Suffix
+								wp.element.createElement('div', { style: { display: 'flex', gap: '8px' } },
+									wp.element.createElement('div', { style: { flex: 1 } },
+										wp.element.createElement(TextControl, {
+											label: 'Prefix',
+											value: currentSettings.prefix || '',
+											onChange: (val) => updateDynamicTag('prefix', val),
+										})
+									),
+									wp.element.createElement('div', { style: { flex: 1 } },
+										wp.element.createElement(TextControl, {
+											label: 'Suffix',
+											value: currentSettings.suffix || '',
+											onChange: (val) => updateDynamicTag('suffix', val),
+										})
+									)
+								),
+
+								// Date Format
+								(currentSettings.key && (currentSettings.key.includes('date') || currentSettings.key.includes('modified'))) && wp.element.createElement(SelectControl, {
+									label: 'Date Format',
+									value: currentSettings.dateFormat || '',
+									options: [
+										{ label: 'Default', value: '' },
+										{ label: 'F j, Y (July 30, 2025)', value: 'F j, Y' },
+										{ label: 'Y-m-d (2025-07-30)', value: 'Y-m-d' },
+										{ label: 'd/m/Y (30/07/2025)', value: 'd/m/Y' },
+										{ label: 'm/d/Y (07/30/2025)', value: 'm/d/Y' },
+									],
+									onChange: (val) => updateDynamicTag('dateFormat', val),
+								}),
+
+								// Number Format
+								(currentSettings.key && (currentSettings.key.includes('price') || currentSettings.key.includes('count') || currentSettings.key.includes('ID'))) && wp.element.createElement(TextControl, {
+									label: 'Decimals',
+									type: 'number',
+									min: 0,
+									max: 5,
+									value: currentSettings.numberDecimals || '',
+									onChange: (val) => updateDynamicTag('numberDecimals', val),
+								})
+							),
 
 							// Remove Button
 							currentSettings.enable && wp.element.createElement(
