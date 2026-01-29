@@ -1,70 +1,37 @@
 # Dynamic Tags Lite
 
-**Dynamic Tags Lite** is a lightweight yet powerful WordPress plugin that allows you to inject dynamic content directly into Gutenberg blocks. Easily display Post Meta (Custom Fields) or Post Data (Title, Date, Author, etc.) within your content without writing code.
+Lightweight and powerful dynamic tags for the WordPress Block Editor (Gutenberg).
 
-## 🚀 Features
+## Features
 
-*   **Dynamic Text Content**: Insert dynamic values into `Paragraph`, `Heading`, and `Button` blocks.
-*   **Dynamic Links**:
-    *   **Text Links**: Select any text and apply a dynamic URL (e.g., Post Permalink, Author URL, Custom Field URL).
-    *   **Image Links**: Wrap `Image` blocks with dynamic links.
-*   **Dynamic Media**:
-    *   **Images**: Dynamically switch the source of an `Image` block to:
-        *   Featured Image
-        *   Author Profile Picture
-        *   Site Logo
-        *   Custom Field Image URL/ID
-    *   **Videos**: Dynamically set the `src` for `Video` blocks.
-*   **Support for Post Meta**:
-    *   Automatically fetches and lists available Meta Keys from your database (up to 500 keys).
-    *   Supports manual entry for custom keys.
-*   **Support for Post Data**:
-    *   ID, Title, Slug, Excerpt, Content, Date, Modified Date.
-    *   Author Name, ID, Profile Picture.
-    *   Categories, Tags, Comment Count.
-*   **Editor Experience**:
-    *   **Live Feedback**: Shows `%% key %%` placeholders for text blocks.
-    *   **Image Preview**: Allows you to keep a static placeholder image in the editor while rendering dynamically on the frontend.
-    *   **Smart Toolbar**: Dedicated "Database" icon in the block toolbar for easy configuration.
+- **Gutenberg Integration**: Add dynamic content to Paragraph, Heading, Image, Video, and Button blocks directly from the editor toolbar.
+- **Data Sources**: 
+  - **Post Meta**: Fetch any custom field value by its key.
+  - **Post Data**: Fetch core post fields like Date, Author, Categories, Permalink, etc.
+- **Advanced Formatting (v1.7.1)**:
+  - **Prefix & Suffix**: Add text before or after dynamic values.
+  - **Date Formatting**: Choose from common date formats or let the plugin handle local date styles.
+  - **Number Formatting**: Set decimal places for numeric values (prices, counts, IDs).
+- **Inline Dynamic Links**: Turn any text selection into a dynamic link that updates automatically.
+- **Frontend Performance**: Zero-dependency frontend rendering.
 
-## 🛠 Installation
+## Version History
 
-1.  Download the plugin zip file.
-2.  Go to your WordPress Dashboard -> **Plugins** -> **Add New** -> **Upload Plugin**.
-3.  Upload the zip file and click **Install Now**.
-4.  Activate the plugin.
+### v1.7.1
+- Fix: Critical dashboard crash and editor syntax errors.
+- Improved: Robust text replacement logic for placeholders like `%% key %%`.
+- Added: Enhanced date parsing for European/Vietnamese formats (d/m/Y).
 
-## 📖 Usage
+### v1.7.0
+- Added: Phase 2 features (Prefix, Suffix, Date & Number formatting).
+- Added: Advanced Settings UI in block popover.
 
-### Adding Dynamic Text
-1.  Add or select a **Paragraph** or **Heading** block.
-2.  Click the **Database Icon** in the block toolbar.
-3.  Select **Source**: "Post Meta" or "Post Data".
-4.  Choose the **Field** you want to display.
-5.  (Optional) Enter a **Fallback Value**.
+## Installation
 
-### Adding a Dynamic Link to Text
-1.  highlight the text you want to link.
-2.  Click the **Arrow (More)** in the rich text toolbar (or look for the Link icon).
-3.  Select the **Dynamic Link** (chain/database link icon).
-4.  Configure the Source and Key for the URL.
-5.  Click **Apply**.
+1. Upload the `dynamic-tags-lite` folder to the `/wp-content/plugins/` directory.
+2. Activate the plugin through the 'Plugins' menu in WordPress.
+3. Look for the **Database icon** in the Gutenberg block toolbar.
 
-### Dynamic Images & Image Links
-1.  Select an **Image** block.
-2.  Click the **Database Icon** in the toolbar.
-3.  **To change the Image Source**: Stay on the "Image Source" tab and select your dynamic field.
-4.  **To add a Link to the Image**: Switch to the "Image Link" tab and configure the dynamic URL.
+## License
 
-## 💻 Requirements
-
-*   WordPress 5.8+ (Gutenberg Editor)
-*   PHP 7.4+
-
-## 🤝 Contributing
-
-Contributions are welcome! Please fork the repository and submit a pull request.
-
-## 📄 License
-
-GPLv2 or later.
+GPL-2.0+
