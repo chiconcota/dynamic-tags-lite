@@ -17,6 +17,12 @@ class Manager {
 			'callback'            => [ $this, 'get_meta_keys' ],
 			'permission_callback' => '__return_true', // Public endpoint for editors
 		] );
+
+		register_rest_route( 'dynamic-tags-lite/v1', '/get-value', [
+			'methods'             => 'GET',
+			'callback'            => [ $this, 'get_value_rest' ],
+			'permission_callback' => '__return_true',
+		] );
 	}
 
 	public function get_meta_keys() {
@@ -57,7 +63,15 @@ class Manager {
 
 		switch ( $source ) {
 			case 'post-meta':
-				return get_post_meta( $context, $key, true );
+				$value = get_post_meta( $context, $key, true );
+				// If it's a numeric ID, it might be an image/attachment. resolve to URL.
+				if ( is_numeric( $value ) && $value > 0 ) {
+					$url = wp_get_attachment_url( $value );
+					if ( $url ) {
+						return $url;
+					}
+				}
+				return $value;
 			
 			case 'post-data':
 				$post = get_post( $context );
@@ -91,6 +105,18 @@ class Manager {
 					return $logo ? $logo[0] : '';
 				}
 
+				if ( 'post_url' === $key ) {
+					return get_permalink( $post->ID );
+				}
+
+				if ( 'post_author_url' === $key ) {
+					return get_author_posts_url( $post->post_author );
+				}
+
+				if ( 'home_url' === $key ) {
+					return home_url( '/' );
+				}
+
 				if ( isset( $post->$key ) ) {
 					return $post->$key;
 				}
@@ -98,5 +124,21 @@ class Manager {
 		}
 
 		return null;
+	}
+
+	public function get_value_rest( $request ) {
+		$source  = $request->get_param( 'source' );
+		$key     = $request->get_param( 'key' );
+		$post_id = $request->get_param( 'post_id' );
+
+		if ( ! $source || ! $key ) {
+			return new \WP_Error( 'missing_params', 'Missing source or key', [ 'status' => 400 ] );
+		}
+
+		$value = $this->get_value( $source, $key, $post_id );
+
+		return rest_ensure_response( [
+			'value' => $value,
+		] );
 	}
 }

@@ -107,6 +107,54 @@
 				}
 			}, [isPopoverOpen, currentSettings.source]);
 
+			// Effect: Synchronize Dynamic Values to Block Attributes (Preview in Editor)
+			useEffect(() => {
+				if (!hasActiveTag) return;
+
+				const postId = wp.data.select('core/editor').getCurrentPostId();
+				console.log(`DTL: Syncing dynamic values for ${name} (Post ID: ${postId})`);
+
+				// 1. Sync Image Source
+				if (name === 'core/image' && dynamicTag.enable && dynamicTag.source && dynamicTag.key) {
+					apiFetch({ path: `/dynamic-tags-lite/v1/get-value?source=${dynamicTag.source}&key=${dynamicTag.key}&post_id=${postId}` })
+						.then((res) => {
+							console.log('DTL: Received image source value:', res.value);
+							if (res.value && res.value !== attributes.url) {
+								setAttributes({
+									url: res.value,
+									id: 0, // Reset ID so block doesn't look for attachment metadata
+									sizeSlug: 'full'
+								});
+							}
+						});
+				}
+
+				// 2. Sync Image Link
+				if (name === 'core/image' && dynamicLink.enable && dynamicLink.source && dynamicLink.key) {
+					apiFetch({ path: `/dynamic-tags-lite/v1/get-value?source=${dynamicLink.source}&key=${dynamicLink.key}&post_id=${postId}` })
+						.then((res) => {
+							console.log('DTL: Received image link value:', res.value);
+							if (res.value && res.value !== attributes.href) {
+								setAttributes({
+									href: res.value,
+									linkDestination: 'custom'
+								});
+							}
+						});
+				}
+
+				// 3. Sync Button Link
+				if (name === 'core/button' && dynamicTag.enable && dynamicTag.source && dynamicTag.key) {
+					apiFetch({ path: `/dynamic-tags-lite/v1/get-value?source=${dynamicTag.source}&key=${dynamicTag.key}&post_id=${postId}` })
+						.then((res) => {
+							console.log('DTL: Received button link value:', res.value);
+							if (res.value && res.value !== attributes.url) {
+								setAttributes({ url: res.value });
+							}
+						});
+				}
+			}, [dynamicTag.enable, dynamicTag.source, dynamicTag.key, dynamicLink.enable, dynamicLink.source, dynamicLink.key]);
+
 			const updateDynamicTag = (key, value) => {
 				const newSettings = {
 					...currentSettings,
@@ -133,9 +181,10 @@
 			const removeDynamicTag = () => {
 				const empty = { enable: false, source: '', key: '', fallback: '' };
 				if (isLinkMode) {
-					setAttributes({ dynamicLink: empty });
+					setAttributes({ dynamicLink: empty, href: '' });
 				} else {
 					setAttributes({ dynamicTag: empty });
+					if (name === 'core/image') setAttributes({ url: '' });
 				}
 				setIsPopoverOpen(false);
 			}
@@ -165,6 +214,8 @@
 				{ label: 'Author ID', value: 'post_author' },
 				{ label: 'Categories', value: 'post_categories' },
 				{ label: 'Tags', value: 'post_tags' },
+				{ label: 'Author URL', value: 'post_author_url' },
+				{ label: 'Home URL', value: 'home_url' },
 			];
 
 			const postDataOptionsMedia = [
@@ -332,7 +383,7 @@
 
 	const DynamicLinkEdit = ({ isActive, value, onChange, contentRef }) => {
 		const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-		const [attributes, setAttributes] = useState(value.activeFormats.find(f => f.type === 'dynamic-tags-lite/dynamic-link')?.attributes || { source: '', key: '', url: '#' });
+		const [attributes, setAttributes] = useState(value.activeFormats.find(f => f.type === 'dynamic-tags-lite/dynamic-link')?.attributes || { source: '', key: '', href: '#' });
 
 		// Internal state for Meta Keys
 		const [metaOptions, setMetaOptions] = useState([]);
@@ -376,7 +427,7 @@
 				attributes: {
 					source: attributes.source,
 					key: attributes.key,
-					url: '#', // Required for <a> tag
+					href: '#', // Required for <a> tag
 					style: 'text-decoration: underline; color: var( --wp--preset--color--primary, #0073aa );' // Visual indicator
 				},
 			}));
@@ -386,7 +437,7 @@
 		const removeDynamicLink = () => {
 			onChange(removeFormat(value, 'dynamic-tags-lite/dynamic-link'));
 			setIsPopoverOpen(false);
-			setAttributes({ source: '', key: '', url: '#' });
+			setAttributes({ source: '', key: '', href: '#' });
 		};
 
 		const postDataOptions = [
@@ -474,6 +525,7 @@
 		attributes: {
 			source: 'data-dtl-source',
 			key: 'data-dtl-key',
+			href: 'href',
 		},
 		edit: DynamicLinkEdit,
 	});

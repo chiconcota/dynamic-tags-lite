@@ -11,6 +11,7 @@ class Gutenberg_Integration {
 		add_action( 'enqueue_block_editor_assets', [ $this, 'enqueue_editor_assets' ] );
 		add_action( 'init', [ $this, 'register_attributes' ] );
 		add_filter( 'render_block', [ $this, 'render_dynamic_content' ], 10, 2 );
+		add_filter( 'block_type_metadata_settings', [ $this, 'register_server_side_attributes' ], 10, 2 );
 	}
 
 	public function enqueue_editor_assets() {
@@ -24,10 +25,27 @@ class Gutenberg_Integration {
 	}
 
 	public function register_attributes() {
-		// We use hooking into block registration in JS, 
-		// but for server-side rendering we treat attributes as added via filters.
-		// However, registering them explicitly here for all blocks is tricky.
-		// We will rely on the fact that we can filter any block content.
+		// JS-side attributes are enough for most cases, but we register server-side via filter below.
+	}
+
+	public function register_server_side_attributes( $settings, $metadata ) {
+		$eligible_blocks = [ 'core/paragraph', 'core/heading', 'core/image', 'core/video', 'core/button' ];
+		
+		if ( in_array( $metadata['name'], $eligible_blocks ) ) {
+			$settings['attributes']['dynamicTag'] = [
+				'type'    => 'object',
+				'default' => [ 'enable' => false, 'source' => '', 'key' => '', 'fallback' => '' ],
+			];
+
+			if ( 'core/image' === $metadata['name'] ) {
+				$settings['attributes']['dynamicLink'] = [
+					'type'    => 'object',
+					'default' => [ 'enable' => false, 'source' => '', 'key' => '', 'fallback' => '' ],
+				];
+			}
+		}
+
+		return $settings;
 	}
 
 	public function render_dynamic_content( $block_content, $block ) {
@@ -46,11 +64,11 @@ class Gutenberg_Integration {
 			if ( ! empty( $link_url ) ) {
 				if ( 'core/image' === $block['blockName'] ) {
 					// Check if image is already wrapped in a link
-					if ( preg_match( '/<figure[^>]*>.*<a\s+[^>]*href=["\']([^"\']+)["\'][^>]*>.*<\/a>.*<\/figure>/is', $block_content ) ) {
+					if ( preg_match( '/<figure[^>]*>.*<a\s+[^>]*href=["\']([^"\']*)["\'][^>]*>.*<\/a>.*<\/figure>/is', $block_content ) ) {
 						// Replace existing href
-						$block_content = preg_replace( '/(<a\s+[^>]*href=["\'])([^"\']+)("[\'][^>]*>)/i', '$1' . esc_url( $link_url ) . '$3', $block_content );
+						$block_content = preg_replace( '/(<a\s+[^>]*href=["\'])([^"\']*)(["\'][^>]*>)/i', '$1' . esc_url( $link_url ) . '$3', $block_content );
 					} else {
-						// Wrap img in link
+						// Wrapping img in link
 						// Finding the img tag and wrapping it
 						$block_content = preg_replace( '/(<img\s+[^>]+>)/i', '<a href="' . esc_url( $link_url ) . '">$1</a>', $block_content );
 					}
@@ -170,9 +188,9 @@ class Gutenberg_Integration {
 				return $tag; // Or remove link? Keep for now.
 			}
 
-			// Replace HREF
-			// We remove existing href and add new one
-			$tag = preg_replace( '/href=["\'][^"\']*["\']/', '', $tag );
+			// Replace HREF and URL attributes
+			// We remove existing href/url and add new one
+			$tag = preg_replace( '/\s+(href|url)=["\'][^"\']*["\']/', '', $tag );
 			$tag = str_replace( '<a ', '<a href="' . esc_url( $url ) . '" ', $tag );
 
 			return $tag;
@@ -180,9 +198,20 @@ class Gutenberg_Integration {
 	}
 
 	protected function replace_text_content( $content, $value ) {
-		// A simple regex to replace content inside the tag:
-		// We capture Start Tag ($1), Inner Content ($2), End Tag ($3)
-		// and replace Inner Content with Value.
+		// For Button blocks, we want to replace the text inside the <a> or <span> tag specifically if possible.
+		// However, a simpler and more robust way is to replace the text between the FIRST non-tag character 
+		// and the LAST non-tag character within the outermost tags.
+		
+		// If it's a Button block, it's often <div class="wp-block-button"><a ...>Button</a></div>
+		// We want to replace "Button" but keep the <a> tag.
+		
+		// Check if it's a button-like structure (contains nested tags)
+		if ( preg_match( '/(<a[^>]*>)(.*)(<\/a>)/is', $content, $matches ) ) {
+			// Replace inner content of <a> tag
+			return str_replace( $matches[2], esc_html( $value ), $content );
+		}
+
+		// Default fallback for Paragraphs/Headings
 		return preg_replace( '/^(<[^>]+>)(.*)(<\/[^>]+>)$/s', '$1' . esc_html( $value ) . '$3', $content );
 	}
 }
