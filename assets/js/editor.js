@@ -140,7 +140,7 @@
 
 				// 2. Sync Image Link
 				if (name === 'core/image' && dynamicLink.enable && dynamicLink.source && dynamicLink.key) {
-					apiFetch({ path: `/dynamic-tags-lite/v1/get-value?source=${dynamicLink.source}&key=${dynamicLink.key}&post_id=${postId}` })
+					apiFetch({ path: `/dynamic-tags-lite/v1/get-value?source=${dynamicLink.source}&key=${dynamicLink.key}&post_id=${postId || 0}` })
 						.then((res) => {
 							console.log('DTL: Received image link value:', res.value);
 							if (res.value && res.value !== attributes.href) {
@@ -154,7 +154,7 @@
 
 				// 3. Sync Button Link
 				if (name === 'core/button' && dynamicTag.enable && dynamicTag.source && dynamicTag.key) {
-					apiFetch({ path: `/dynamic-tags-lite/v1/get-value?source=${dynamicTag.source}&key=${dynamicTag.key}&post_id=${postId}` })
+					apiFetch({ path: `/dynamic-tags-lite/v1/get-value?source=${dynamicTag.source}&key=${dynamicTag.key}&post_id=${postId || 0}` })
 						.then((res) => {
 							console.log('DTL: Received button link value:', res.value);
 							if (res.value && res.value !== attributes.url) {
@@ -177,8 +177,8 @@
 				} else {
 					newAttributes.dynamicTag = newSettings;
 
-					// UX 1: For Text blocks, show %% key %%
-					if (['core/paragraph', 'core/heading'].includes(name)) {
+					// UX 1: For Text blocks, show %% key %% only if KEY is being updated
+					if (key === 'key' && ['core/paragraph', 'core/heading'].includes(name)) {
 						if (value && value !== 'custom') {
 							newAttributes.content = `%% ${value} %%`;
 						}
@@ -256,6 +256,11 @@
 
 			// Let's stick to the simplest: Use 'yes' (checkmark) icon when active, OR 'database' when inactive.
 			// Or better: 'saved'.
+
+			// Defensive checks for formatting UI
+			const safeKey = String(currentSettings.key || '');
+			const isDateField = safeKey.includes('date') || safeKey.includes('modified');
+			const isNumberField = safeKey.includes('price') || safeKey.includes('count') || safeKey.includes('ID');
 
 			return [
 				wp.element.createElement(BlockEdit, { ...props, key: 'block-edit' }),
@@ -395,7 +400,7 @@
 								),
 
 								// Date Format
-								(currentSettings.key && (currentSettings.key.includes('date') || currentSettings.key.includes('modified'))) && wp.element.createElement(SelectControl, {
+								isDateField && wp.element.createElement(SelectControl, {
 									label: 'Date Format',
 									value: currentSettings.dateFormat || '',
 									options: [
@@ -409,7 +414,7 @@
 								}),
 
 								// Number Format
-								(currentSettings.key && (currentSettings.key.includes('price') || currentSettings.key.includes('count') || currentSettings.key.includes('ID'))) && wp.element.createElement(TextControl, {
+								isNumberField && wp.element.createElement(TextControl, {
 									label: 'Decimals',
 									type: 'number',
 									min: 0,
