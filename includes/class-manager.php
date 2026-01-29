@@ -64,6 +64,11 @@ class Manager {
 		switch ( $source ) {
 			case 'post-meta':
 				$value = get_post_meta( $context, $key, true );
+				
+				if ( empty( $value ) ) {
+					error_log( "DTL: Value for key '{$key}' on post {$context} is empty." );
+				}
+
 				// If it's a numeric ID, it might be an image/attachment. resolve to URL.
 				if ( is_numeric( $value ) && $value > 0 ) {
 					$url = wp_get_attachment_url( $value );

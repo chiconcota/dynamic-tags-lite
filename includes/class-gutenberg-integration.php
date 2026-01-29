@@ -114,7 +114,10 @@ class Gutenberg_Integration {
 		}
 
 		if ( empty( $value ) ) {
-			return $block_content;
+			// If we are in debug mode or just for logged in users, maybe show a hint?
+			// For now, let's add an HTML comment for debugging.
+			$debug_msg = sprintf( '<!-- DTL Debug: Key "%s" from Source "%s" returned empty. -->', esc_attr( $setting['key'] ), esc_attr( $setting['source'] ) );
+			return $block_content . $debug_msg;
 		}
 
 		$value = $this->apply_formatting( $value, $setting );
@@ -220,21 +223,19 @@ class Gutenberg_Integration {
 	}
 
 	protected function replace_text_content( $content, $value ) {
-		// For Button blocks, we want to replace the text inside the <a> or <span> tag specifically if possible.
-		// However, a simpler and more robust way is to replace the text between the FIRST non-tag character 
-		// and the LAST non-tag character within the outermost tags.
+		// New robust logic: Replace %% key %% pattern specifically.
+		// This supports multiple placeholders and mixed content.
 		
-		// If it's a Button block, it's often <div class="wp-block-button"><a ...>Button</a></div>
-		// We want to replace "Button" but keep the <a> tag.
-		
-		// Check if it's a button-like structure (contains nested tags)
-		if ( preg_match( '/(<a[^>]*>)(.*)(<\/a>)/is', $content, $matches ) ) {
-			// Replace inner content of <a> tag
-			return str_replace( $matches[2], esc_html( $value ), $content );
+		// If the content doesn't have a placeholder, fall back to replacing everything inside the tags
+		if ( strpos( $content, '%%' ) === false ) {
+			if ( preg_match( '/(<a[^>]*>)(.*)(<\/a>)/is', $content, $matches ) ) {
+				return str_replace( $matches[2], esc_html( $value ), $content );
+			}
+			return preg_replace( '/^(<[^>]+>)(.*)(<\/[^>]+>)$/s', '$1' . esc_html( $value ) . '$3', $content );
 		}
 
-		// Default fallback for Paragraphs/Headings
-		return preg_replace( '/^(<[^>]+>)(.*)(<\/[^>]+>)$/s', '$1' . esc_html( $value ) . '$3', $content );
+		// Replace patterns like %% some_key %% (with or without spaces)
+		return preg_replace( '/%%[\s]*[^%]+[\s]*%%/', esc_html( $value ), $content );
 	}
 
 	/**
@@ -252,8 +253,20 @@ class Gutenberg_Integration {
 
 		// 2. Date Formatting
 		if ( ! empty( $settings['dateFormat'] ) ) {
-			// Try to convert to timestamp if it's not numeric
-			$timestamp = is_numeric( $value ) ? $value : strtotime( $value );
+			$timestamp = false;
+			if ( is_numeric( $value ) ) {
+				$timestamp = $value;
+			} else {
+				// Try parsing European/Vietnamese formats (d/m/Y) by replacing / with - for strtotime
+				$normalized_value = str_replace( '/', '-', $value );
+				$timestamp = strtotime( $normalized_value );
+				
+				// Fallback if still false
+				if ( ! $timestamp ) {
+					$timestamp = strtotime( $value );
+				}
+			}
+			
 			if ( $timestamp ) {
 				$value = wp_date( $settings['dateFormat'], $timestamp );
 			}
