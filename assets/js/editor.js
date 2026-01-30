@@ -286,6 +286,8 @@
 				{ label: 'Categories', value: 'post_categories' },
 				{ label: 'Tags', value: 'post_tags' },
 				{ label: 'Author URL', value: 'post_author_url' },
+				{ label: 'Author Bio', value: 'author_bio' },
+				{ label: 'Author Meta...', value: 'author_meta' },
 				{ label: 'Home URL', value: 'home_url' },
 			];
 
@@ -357,6 +359,7 @@
 								{ label: 'Select Source...', value: '' },
 								{ label: 'Post Meta', value: 'post-meta' },
 								{ label: 'Post Data', value: 'post-data' },
+								{ label: 'Current User', value: 'current-user' },
 								{ label: 'Secure Custom Fields', value: 'scf' },
 							],
 							onChange: (val) => updateDynamicTag('source', val),
@@ -417,12 +420,47 @@
 							})
 						),
 
-						(currentSettings.source === 'post-data') && wp.element.createElement(SelectControl, {
-							label: 'Field',
-							value: currentSettings.key,
-							options: currentPostDataOptions,
-							onChange: (val) => updateDynamicTag('key', val),
-						}),
+						(currentSettings.source === 'post-data') && wp.element.createElement('div', {},
+							wp.element.createElement(SelectControl, {
+								label: 'Field',
+								value: currentSettings.key.startsWith('author_meta:') ? 'author_meta' : currentSettings.key,
+								options: currentPostDataOptions,
+								onChange: (val) => updateDynamicTag('key', val),
+							}),
+							(currentSettings.key.startsWith('author_meta:') || currentSettings.key === 'author_meta') && wp.element.createElement(TextControl, {
+								placeholder: 'Enter author meta key...',
+								value: currentSettings.key.replace('author_meta:', ''),
+								onChange: (val) => updateDynamicTag('key', 'author_meta:' + val),
+								help: 'Metadata of the post author.'
+							})
+						),
+
+						// Current User Section
+						(currentSettings.source === 'current-user') && wp.element.createElement('div', { style: { marginBottom: '16px', borderLeft: '2px solid #edaf14', paddingLeft: '10px' } },
+							wp.element.createElement(SelectControl, {
+								label: 'User Field',
+								value: ['ID', 'display_name', 'user_email', 'user_login', 'user_nicename'].includes(currentSettings.key) ? currentSettings.key : (currentSettings.key ? 'custom' : ''),
+								options: [
+									{ label: 'Select User Field...', value: '' },
+									{ label: 'Display Name', value: 'display_name' },
+									{ label: 'Email', value: 'user_email' },
+									{ label: 'ID', value: 'ID' },
+									{ label: 'Login Name', value: 'user_login' },
+									{ label: 'Nicename', value: 'user_nicename' },
+									{ label: 'Custom User Meta...', value: 'custom' },
+								],
+								onChange: (val) => {
+									if (val !== 'custom') updateDynamicTag('key', val);
+								},
+							}),
+
+							(['custom'].includes(currentSettings.key) || (!['ID', 'display_name', 'user_email', 'user_login', 'user_nicename', ''].includes(currentSettings.key) && currentSettings.source === 'current-user')) && wp.element.createElement(TextControl, {
+								placeholder: 'Enter user meta key...',
+								value: ['ID', 'display_name', 'user_email', 'user_login', 'user_nicename'].includes(currentSettings.key) ? '' : currentSettings.key,
+								onChange: (val) => updateDynamicTag('key', val),
+								help: 'Metadata of the currently logged-in user.'
+							})
+						),
 
 						wp.element.createElement(TextControl, {
 							label: 'Fallback Text',
@@ -622,6 +660,7 @@
 							{ label: 'Select Source...', value: '' },
 							{ label: 'Post Meta', value: 'post-meta' },
 							{ label: 'Post Data', value: 'post-data' },
+							{ label: 'Current User', value: 'current-user' },
 							{ label: 'Secure Custom Fields', value: 'scf' },
 						],
 						onChange: (val) => setAttributes({ ...attributes, source: val })
@@ -659,6 +698,28 @@
 						],
 						onChange: (val) => setAttributes({ ...attributes, key: val })
 					}),
+
+					(attributes.source === 'current-user') && wp.element.createElement('div', {},
+						wp.element.createElement(SelectControl, {
+							label: 'User Field',
+							value: ['ID', 'display_name', 'user_email'].includes(attributes.key) ? attributes.key : (attributes.key ? 'custom' : ''),
+							options: [
+								{ label: 'Select User Field...', value: '' },
+								{ label: 'Display Name', value: 'display_name' },
+								{ label: 'Email', value: 'user_email' },
+								{ label: 'ID', value: 'ID' },
+								{ label: 'Custom Meta...', value: 'custom' },
+							],
+							onChange: (val) => {
+								if (val !== 'custom') setAttributes({ ...attributes, key: val });
+							}
+						}),
+						(attributes.key === 'custom' || (!['ID', 'display_name', 'user_email', ''].includes(attributes.key) && attributes.source === 'current-user')) && wp.element.createElement(TextControl, {
+							placeholder: 'Enter meta key...',
+							value: ['ID', 'display_name', 'user_email'].includes(attributes.key) ? '' : attributes.key,
+							onChange: (val) => setAttributes({ ...attributes, key: val })
+						})
+					),
 
 					wp.element.createElement('div', { style: { display: 'flex', gap: '8px', marginTop: '16px' } },
 						wp.element.createElement(Button, {

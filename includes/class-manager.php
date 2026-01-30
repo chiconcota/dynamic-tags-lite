@@ -128,6 +128,15 @@ class Manager {
 					return home_url( '/' );
 				}
 
+				if ( 'author_bio' === $key || 'post_author_bio' === $key ) {
+					return get_the_author_meta( 'description', $post->post_author );
+				}
+
+				if ( strpos( $key, 'author_meta:' ) === 0 ) {
+					$meta_key = str_replace( 'author_meta:', '', $key );
+					return get_the_author_meta( $meta_key, $post->post_author );
+				}
+
 				if ( isset( $post->$key ) ) {
 					return $post->$key;
 				}
@@ -146,6 +155,35 @@ class Manager {
 				}
 
 				return $value;
+
+			case 'current-user':
+				$user = wp_get_current_user();
+				if ( ! $user || 0 === $user->ID ) {
+					return null;
+				}
+
+				if ( 'ID' === $key ) {
+					return $user->ID;
+				}
+
+				if ( 'display_name' === $key ) {
+					return $user->display_name;
+				}
+
+				if ( 'user_email' === $key ) {
+					return $user->user_email;
+				}
+
+				if ( 'user_login' === $key ) {
+					return $user->user_login;
+				}
+
+				if ( 'user_nicename' === $key ) {
+					return $user->user_nicename;
+				}
+
+				// If not core field, try meta
+				return get_user_meta( $user->ID, $key, true );
 		}
 
 		return null;
