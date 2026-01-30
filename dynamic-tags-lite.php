@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Dynamic Tags Lite
  * Description: Lightweight dynamic tags for Gutenberg.
- * Version: 1.8.0
+ * Version: 1.9.0
  * Author: Antigravity
  * Text Domain: dynamic-tags-lite
  */
