@@ -31,7 +31,8 @@
 					prefix: '',
 					suffix: '',
 					dateFormat: '',
-					numberDecimals: ''
+					numberDecimals: '',
+					preview: false
 				},
 			}
 		};
@@ -48,7 +49,8 @@
 					prefix: '',
 					suffix: '',
 					dateFormat: '',
-					numberDecimals: ''
+					numberDecimals: '',
+					preview: false
 				},
 			};
 		}
@@ -162,7 +164,31 @@
 							}
 						});
 				}
-			}, [dynamicTag.enable, dynamicTag.source, dynamicTag.key, dynamicLink.enable, dynamicLink.source, dynamicLink.key]);
+
+				// 4. Live Preview for Text Content
+				if (['core/paragraph', 'core/heading'].includes(name) && dynamicTag.enable && dynamicTag.preview && dynamicTag.source && dynamicTag.key) {
+					const formatParams = JSON.stringify({
+						prefix: dynamicTag.prefix,
+						suffix: dynamicTag.suffix,
+						dateFormat: dynamicTag.dateFormat,
+						numberDecimals: dynamicTag.numberDecimals
+					});
+
+					apiFetch({ path: `/dynamic-tags-lite/v1/get-value?source=${dynamicTag.source}&key=${dynamicTag.key}&post_id=${postId || 0}&format=${encodeURIComponent(formatParams)}` })
+						.then((res) => {
+							console.log('DTL: Received preview value:', res.formatted_value);
+							if (res.formatted_value !== undefined && res.formatted_value !== attributes.content) {
+								setAttributes({ content: res.formatted_value });
+							}
+						});
+				} else if (['core/paragraph', 'core/heading'].includes(name) && dynamicTag.enable && !dynamicTag.preview && dynamicTag.key) {
+					// Restore Placeholder
+					const placeholder = `%% ${dynamicTag.key} %%`;
+					if (attributes.content !== placeholder) {
+						setAttributes({ content: placeholder });
+					}
+				}
+			}, [dynamicTag.enable, dynamicTag.source, dynamicTag.key, dynamicTag.preview, dynamicTag.prefix, dynamicTag.suffix, dynamicTag.dateFormat, dynamicTag.numberDecimals, dynamicLink.enable, dynamicLink.source, dynamicLink.key]);
 
 			const updateDynamicTag = (key, value) => {
 				const newSettings = {
@@ -272,6 +298,12 @@
 						label: 'Dynamic Tag',
 						onClick: togglePopover,
 						isActive: hasActiveTag,
+					}),
+					hasActiveTag && ['core/paragraph', 'core/heading'].includes(name) && wp.element.createElement(ToolbarButton, {
+						icon: dynamicTag.preview ? 'visibility' : 'hidden',
+						label: dynamicTag.preview ? 'Hide Preview' : 'Live Preview',
+						onClick: () => updateDynamicTag('preview', !dynamicTag.preview),
+						isActive: dynamicTag.preview,
 					}),
 					isPopoverOpen && wp.element.createElement(
 						Popover,

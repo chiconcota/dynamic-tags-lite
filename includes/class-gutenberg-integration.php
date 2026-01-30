@@ -241,7 +241,7 @@ class Gutenberg_Integration {
 	/**
 	 * Apply prefix, suffix, date and number formatting to a dynamic value.
 	 */
-	protected function apply_formatting( $value, $settings ) {
+	public function apply_formatting( $value, $settings ) {
 		if ( empty( $value ) ) {
 			return $value;
 		}

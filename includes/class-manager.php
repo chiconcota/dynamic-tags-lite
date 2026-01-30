@@ -142,8 +142,21 @@ class Manager {
 
 		$value = $this->get_value( $source, $key, $post_id );
 
+		// Apply formatting if requested
+		$settings = [
+			'prefix'         => $request->get_param( 'prefix' ),
+			'suffix'         => $request->get_param( 'suffix' ),
+			'dateFormat'     => $request->get_param( 'dateFormat' ),
+			'numberDecimals' => $request->get_param( 'numberDecimals' ),
+		];
+
+		if ( $value !== null ) {
+			$value = $this->apply_formatting( $value, $settings );
+		}
+
 		return rest_ensure_response( [
-			'value' => $value,
+			'value'           => $value,
+			'formatted_value' => $formatted_value,
 		] );
 	}
 }
