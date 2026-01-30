@@ -42,7 +42,8 @@ class Gutenberg_Integration {
 					'prefix' => '',
 					'suffix' => '',
 					'dateFormat' => '',
-					'numberDecimals' => ''
+					'numberDecimals' => '',
+					'showPreview' => true
 				],
 			];
 
@@ -57,7 +58,8 @@ class Gutenberg_Integration {
 						'prefix' => '',
 						'suffix' => '',
 						'dateFormat' => '',
-						'numberDecimals' => ''
+						'numberDecimals' => '',
+						'showPreview' => true
 					],
 				];
 			}
@@ -80,7 +82,7 @@ class Gutenberg_Integration {
 			}
 
 			if ( ! empty( $link_url ) ) {
-				$link_url = $this->apply_formatting( $link_url, $link_setting );
+				$link_url = Plugin::instance()->manager->apply_formatting( $link_url, $link_setting );
 
 				if ( 'core/image' === $block['blockName'] ) {
 					// Check if image is already wrapped in a link
@@ -120,7 +122,7 @@ class Gutenberg_Integration {
 			return $block_content . $debug_msg;
 		}
 
-		$value = $this->apply_formatting( $value, $setting );
+		$value = Plugin::instance()->manager->apply_formatting( $value, $setting );
 
 		// Handle array values (e.g. Checkbox, Select)
 		if ( is_array( $value ) ) {
@@ -236,52 +238,5 @@ class Gutenberg_Integration {
 
 		// Replace patterns like %% some_key %% (with or without spaces)
 		return preg_replace( '/%%[\s]*[^%]+[\s]*%%/', esc_html( $value ), $content );
-	}
-
-	/**
-	 * Apply prefix, suffix, date and number formatting to a dynamic value.
-	 */
-	public function apply_formatting( $value, $settings ) {
-		if ( empty( $value ) ) {
-			return $value;
-		}
-
-		// 1. Array Value Handling (move from render_dynamic_content if needed, but keeping it simple)
-		if ( is_array( $value ) ) {
-			$value = implode( ', ', $value );
-		}
-
-		// 2. Date Formatting
-		if ( ! empty( $settings['dateFormat'] ) ) {
-			$timestamp = false;
-			if ( is_numeric( $value ) ) {
-				$timestamp = $value;
-			} else {
-				// Try parsing European/Vietnamese formats (d/m/Y) by replacing / with - for strtotime
-				$normalized_value = str_replace( '/', '-', $value );
-				$timestamp = strtotime( $normalized_value );
-				
-				// Fallback if still false
-				if ( ! $timestamp ) {
-					$timestamp = strtotime( $value );
-				}
-			}
-			
-			if ( $timestamp ) {
-				$value = wp_date( $settings['dateFormat'], $timestamp );
-			}
-		}
-
-		// 3. Number Formatting
-		if ( isset( $settings['numberDecimals'] ) && $settings['numberDecimals'] !== '' ) {
-			$decimals = intval( $settings['numberDecimals'] );
-			$value = number_format_i18n( floatval( $value ), $decimals );
-		}
-
-		// 4. Prefix & Suffix
-		$prefix = isset( $settings['prefix'] ) ? $settings['prefix'] : '';
-		$suffix = isset( $settings['suffix'] ) ? $settings['suffix'] : '';
-		
-		return $prefix . $value . $suffix;
 	}
 }

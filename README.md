@@ -17,6 +17,11 @@ Lightweight and powerful dynamic tags for the WordPress Block Editor (Gutenberg)
 
 ## Version History
 
+### v1.8.0
+- Added: Phase 3 features (Secure Custom Fields - SCF Integration).
+- Added: Field selection dropdown for SCF fields in the editor.
+- Improved: Unified formatting logic for all data sources.
+
 ### v1.7.1
 - Fix: Critical dashboard crash and editor syntax errors.
 - Improved: Robust text replacement logic for placeholders like `%% key %%`.

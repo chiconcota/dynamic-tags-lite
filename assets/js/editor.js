@@ -32,7 +32,7 @@
 					suffix: '',
 					dateFormat: '',
 					numberDecimals: '',
-					preview: false
+					showPreview: true
 				},
 			}
 		};
@@ -50,7 +50,7 @@
 					suffix: '',
 					dateFormat: '',
 					numberDecimals: '',
-					preview: false
+					showPreview: true
 				},
 			};
 		}
@@ -72,16 +72,19 @@
 			}
 
 			// Settings
-			const dynamicTag = attributes.dynamicTag || { enable: false, source: '', key: '', fallback: '', prefix: '', suffix: '', dateFormat: '', numberDecimals: '' };
-			const dynamicLink = attributes.dynamicLink || { enable: false, source: '', key: '', fallback: '', prefix: '', suffix: '', dateFormat: '', numberDecimals: '' };
+			const dynamicTag = attributes.dynamicTag || { enable: false, source: '', key: '', fallback: '', prefix: '', suffix: '', dateFormat: '', numberDecimals: '', showPreview: true };
+			const dynamicLink = attributes.dynamicLink || { enable: false, source: '', key: '', fallback: '', prefix: '', suffix: '', dateFormat: '', numberDecimals: '', showPreview: true };
 
 			// UI State
 			const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 			const [activeTab, setActiveTab] = useState('content'); // 'content' or 'link'
 			const [metaOptions, setMetaOptions] = useState([]);
+			const [scfOptions, setSCFOptions] = useState([]);
 			const [isLoadingKeys, setIsLoadingKeys] = useState(false);
+			const [isLoadingSCF, setIsLoadingSCF] = useState(false);
 			const [fetchError, setFetchError] = useState(null);
 			const [keysLoaded, setKeysLoaded] = useState(false);
+			const [scfLoaded, setSCFLoaded] = useState(false);
 			const [showAdvanced, setShowAdvanced] = useState(false);
 
 			const togglePopover = () => setIsPopoverOpen(!isPopoverOpen);
@@ -93,13 +96,11 @@
 
 			// Function to Fetch Keys
 			const fetchMetaKeys = () => {
-				console.log('DTL: Fetching meta keys manually...');
 				setIsLoadingKeys(true);
 				setFetchError(null);
 
 				apiFetch({ path: '/dynamic-tags-lite/v1/meta-keys' })
 					.then((keys) => {
-						console.log('DTL: Keys loaded:', keys);
 						setMetaOptions(keys);
 						setKeysLoaded(true);
 						setIsLoadingKeys(false);
@@ -111,10 +112,31 @@
 					});
 			};
 
+			const fetchSCFFields = () => {
+				setIsLoadingSCF(true);
+				setFetchError(null);
+
+				apiFetch({ path: '/dynamic-tags-lite/v1/scf-fields' })
+					.then((options) => {
+						setSCFOptions(options);
+						setSCFLoaded(true);
+						setIsLoadingSCF(false);
+					})
+					.catch((err) => {
+						console.error('DTL: SCF Fetch error', err);
+						setFetchError(err.message || 'SCF not found');
+						setIsLoadingSCF(false);
+					});
+			};
+
 			// Auto-fetch on first open if empty
 			useEffect(() => {
-				if (isPopoverOpen && currentSettings.source === 'post-meta' && !keysLoaded && !isLoadingKeys) {
-					fetchMetaKeys();
+				if (isPopoverOpen && !isLoadingKeys) {
+					if (currentSettings.source === 'post-meta' && !keysLoaded) {
+						fetchMetaKeys();
+					} else if (currentSettings.source === 'scf' && !scfLoaded) {
+						fetchSCFFields();
+					}
 				}
 			}, [isPopoverOpen, currentSettings.source]);
 
@@ -123,17 +145,15 @@
 				if (!hasActiveTag) return;
 
 				const postId = wp.data.select('core/editor').getCurrentPostId();
-				console.log(`DTL: Syncing dynamic values for ${name} (Post ID: ${postId})`);
 
 				// 1. Sync Image Source
 				if (name === 'core/image' && dynamicTag.enable && dynamicTag.source && dynamicTag.key) {
 					apiFetch({ path: `/dynamic-tags-lite/v1/get-value?source=${dynamicTag.source}&key=${dynamicTag.key}&post_id=${postId}` })
 						.then((res) => {
-							console.log('DTL: Received image source value:', res.value);
 							if (res.value && res.value !== attributes.url) {
 								setAttributes({
 									url: res.value,
-									id: 0, // Reset ID so block doesn't look for attachment metadata
+									id: 0,
 									sizeSlug: 'full'
 								});
 							}
@@ -144,7 +164,6 @@
 				if (name === 'core/image' && dynamicLink.enable && dynamicLink.source && dynamicLink.key) {
 					apiFetch({ path: `/dynamic-tags-lite/v1/get-value?source=${dynamicLink.source}&key=${dynamicLink.key}&post_id=${postId || 0}` })
 						.then((res) => {
-							console.log('DTL: Received image link value:', res.value);
 							if (res.value && res.value !== attributes.href) {
 								setAttributes({
 									href: res.value,
@@ -158,37 +177,56 @@
 				if (name === 'core/button' && dynamicTag.enable && dynamicTag.source && dynamicTag.key) {
 					apiFetch({ path: `/dynamic-tags-lite/v1/get-value?source=${dynamicTag.source}&key=${dynamicTag.key}&post_id=${postId || 0}` })
 						.then((res) => {
-							console.log('DTL: Received button link value:', res.value);
 							if (res.value && res.value !== attributes.url) {
 								setAttributes({ url: res.value });
 							}
 						});
 				}
 
-				// 4. Live Preview for Text Content
-				if (['core/paragraph', 'core/heading'].includes(name) && dynamicTag.enable && dynamicTag.preview && dynamicTag.source && dynamicTag.key) {
-					const formatParams = JSON.stringify({
-						prefix: dynamicTag.prefix,
-						suffix: dynamicTag.suffix,
-						dateFormat: dynamicTag.dateFormat,
-						numberDecimals: dynamicTag.numberDecimals
-					});
-
-					apiFetch({ path: `/dynamic-tags-lite/v1/get-value?source=${dynamicTag.source}&key=${dynamicTag.key}&post_id=${postId || 0}&format=${encodeURIComponent(formatParams)}` })
-						.then((res) => {
-							console.log('DTL: Received preview value:', res.formatted_value);
-							if (res.formatted_value !== undefined && res.formatted_value !== attributes.content) {
-								setAttributes({ content: res.formatted_value });
-							}
-						});
-				} else if (['core/paragraph', 'core/heading'].includes(name) && dynamicTag.enable && !dynamicTag.preview && dynamicTag.key) {
-					// Restore Placeholder
-					const placeholder = `%% ${dynamicTag.key} %%`;
-					if (attributes.content !== placeholder) {
-						setAttributes({ content: placeholder });
+				// 4. Sync Text Content (Paragraph/Heading) with Debounce
+				if (['core/paragraph', 'core/heading'].includes(name) && dynamicTag.enable && dynamicTag.source && dynamicTag.key) {
+					if (!dynamicTag.showPreview) {
+						const placeholder = `%% ${dynamicTag.key} %%`;
+						if (attributes.content !== placeholder) {
+							setAttributes({ content: placeholder });
+						}
+						return;
 					}
+
+					const timeoutId = setTimeout(() => {
+						const queryParams = new URLSearchParams({
+							source: dynamicTag.source,
+							key: dynamicTag.key,
+							post_id: postId || 0,
+							prefix: dynamicTag.prefix || '',
+							suffix: dynamicTag.suffix || '',
+							dateFormat: dynamicTag.dateFormat || '',
+							numberDecimals: dynamicTag.numberDecimals || ''
+						}).toString();
+
+						apiFetch({ path: `/dynamic-tags-lite/v1/get-value?${queryParams}` })
+							.then((res) => {
+								if (res.value !== undefined && res.value !== attributes.content) {
+									setAttributes({ content: res.value });
+								}
+							});
+					}, 600);
+
+					return () => clearTimeout(timeoutId);
 				}
-			}, [dynamicTag.enable, dynamicTag.source, dynamicTag.key, dynamicTag.preview, dynamicTag.prefix, dynamicTag.suffix, dynamicTag.dateFormat, dynamicTag.numberDecimals, dynamicLink.enable, dynamicLink.source, dynamicLink.key]);
+			}, [
+				dynamicTag.enable,
+				dynamicTag.source,
+				dynamicTag.key,
+				dynamicTag.showPreview,
+				dynamicTag.prefix,
+				dynamicTag.suffix,
+				dynamicTag.dateFormat,
+				dynamicTag.numberDecimals,
+				dynamicLink.enable,
+				dynamicLink.source,
+				dynamicLink.key
+			]);
 
 			const updateDynamicTag = (key, value) => {
 				const newSettings = {
@@ -203,7 +241,6 @@
 				} else {
 					newAttributes.dynamicTag = newSettings;
 
-					// UX 1: For Text blocks, show %% key %% only if KEY is being updated
 					if (key === 'key' && ['core/paragraph', 'core/heading'].includes(name)) {
 						if (value && value !== 'custom') {
 							newAttributes.content = `%% ${value} %%`;
@@ -214,7 +251,7 @@
 			};
 
 			const removeDynamicTag = () => {
-				const empty = { enable: false, source: '', key: '', fallback: '', prefix: '', suffix: '', dateFormat: '', numberDecimals: '' };
+				const empty = { enable: false, source: '', key: '', fallback: '', prefix: '', suffix: '', dateFormat: '', numberDecimals: '', showPreview: true };
 				if (isLinkMode) {
 					setAttributes({ dynamicLink: empty, href: '' });
 				} else {
@@ -227,7 +264,6 @@
 			const hasKey = (key) => metaOptions.find(o => o.value === key);
 			const dropdownValue = hasKey(currentSettings.key) ? currentSettings.key : 'custom';
 
-			// Contextual Options
 			const isMediaBlock = ['core/image', 'core/video'].includes(name);
 
 			const postDataOptionsText = [
@@ -261,29 +297,8 @@
 				{ label: 'Custom Meta Image', value: 'custom_meta_image' },
 			];
 
-			// For Link mode, show Text Options
 			const currentPostDataOptions = (!isMediaBlock || isLinkMode) ? postDataOptionsText : postDataOptionsMedia;
 
-			// Success Icon (Database with Checkmark)
-			const databaseSuccessIcon = wp.element.createElement('svg', { width: 20, height: 20, viewBox: "0 0 24 24", fill: "none", xmlns: "http://www.w3.org/2000/svg" },
-				wp.element.createElement('path', { d: "M12 3C7.58 3 4 4.34 4 6V18C4 19.66 7.58 21 12 21C13.5 21 14.9 20.85 16.15 20.58C16.05 20.24 16 19.88 16 19.5C16 19.17 16.05 18.85 16.14 18.54C14.98 18.84 13.55 19 12 19C8.13 19 6 17.97 6 17V14.77C7.61 15.55 9.72 16 12 16C12.58 16 13.14 15.97 13.68 15.91C14.47 14.6 15.63 13.55 17.03 12.91C15.55 12.33 13.84 12 12 12C8.13 12 6 10.97 6 10V7.77C7.61 8.55 9.72 9 12 9C14.28 9 16.39 8.55 18 7.77V10.18C18.63 10.06 19.3 10 20 10C20.72 10 21.39 10.1 22 10.28V6C22 4.34 18.42 3 12 3Z", fill: "currentColor" }),
-				wp.element.createElement('path', { d: "M21.7 13.29C21.31 12.9 20.68 12.9 20.29 13.29L19 14.59L17.71 13.29C17.32 12.9 16.69 12.9 16.3 13.29C15.91 13.68 15.91 14.31 16.3 14.7L18.3 16.7C18.69 17.09 19.32 17.09 19.71 16.7L21.7 14.7C22.09 14.31 22.09 13.68 21.7 13.29Z", fill: "currentColor" }), // Mock checkmark path
-				wp.element.createElement('path', { d: "M19 13L23 17L19 21L15 17L19 13Z", fill: "green" }) // Simple checkmark placeholder path if complex one fails or override. Actually let's use a simpler path for checkmark.
-			);
-
-			// Real simplified checkmark overlay
-			const dbSuccess = wp.element.createElement('svg', { width: 24, height: 24, viewBox: "0 0 24 24" },
-				wp.element.createElement('path', { d: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z", fill: "currentColor" })
-			);
-			// Using Dashicons 'yes' mixed with database? 
-			// Let's use the standard 'saved' icon or just checkmark when active if 'database' icon isn't strictly required, 
-			// OR just swap to 'yes' (checkmark) icon provided by WP.
-			// The user specific requested "Success Database Icon".
-
-			// Let's stick to the simplest: Use 'yes' (checkmark) icon when active, OR 'database' when inactive.
-			// Or better: 'saved'.
-
-			// Defensive checks for formatting UI
 			const safeKey = String(currentSettings.key || '');
 			const isDateField = safeKey.includes('date') || safeKey.includes('modified');
 			const isNumberField = safeKey.includes('price') || safeKey.includes('count') || safeKey.includes('ID');
@@ -297,176 +312,183 @@
 						icon: hasActiveTag ? 'yes' : 'database',
 						label: 'Dynamic Tag',
 						onClick: togglePopover,
-						isActive: hasActiveTag,
+						isActive: isPopoverOpen,
 					}),
-					hasActiveTag && ['core/paragraph', 'core/heading'].includes(name) && wp.element.createElement(ToolbarButton, {
-						icon: dynamicTag.preview ? 'visibility' : 'hidden',
-						label: dynamicTag.preview ? 'Hide Preview' : 'Live Preview',
-						onClick: () => updateDynamicTag('preview', !dynamicTag.preview),
-						isActive: dynamicTag.preview,
-					}),
-					isPopoverOpen && wp.element.createElement(
-						Popover,
-						{
-							onClose: () => setIsPopoverOpen(false),
-							position: 'bottom center',
-						},
-						wp.element.createElement(
-							'div',
-							{ style: { padding: '16px', minWidth: '300px' } },
+					hasActiveTag && wp.element.createElement(ToolbarButton, {
+						icon: dynamicTag.showPreview ? 'visibility' : 'hidden',
+						label: dynamicTag.showPreview ? 'Show Original' : 'Show Preview',
+						onClick: () => updateDynamicTag('showPreview', !dynamicTag.showPreview),
+						isActive: dynamicTag.showPreview,
+					})
+				),
+				isPopoverOpen && wp.element.createElement(
+					Popover,
+					{
+						onClose: () => setIsPopoverOpen(false),
+						position: 'bottom center',
+						key: 'dtl-popover'
+					},
+					wp.element.createElement(
+						'div',
+						{ style: { padding: '16px', minWidth: '300px' } },
 
-							// 1. Tab Switcher for Image Block
-							(name === 'core/image') && wp.element.createElement('div', { style: { display: 'flex', borderBottom: '1px solid #eee', marginBottom: '15px', paddingBottom: '10px' } },
+						(name === 'core/image') && wp.element.createElement('div', { style: { display: 'flex', borderBottom: '1px solid #eee', marginBottom: '15px', paddingBottom: '10px' } },
+							wp.element.createElement(Button, {
+								isSmall: true,
+								variant: activeTab === 'content' ? 'primary' : 'tertiary',
+								onClick: () => setActiveTab('content'),
+								style: { marginRight: '10px' }
+							}, 'Image Source'),
+							wp.element.createElement(Button, {
+								isSmall: true,
+								variant: activeTab === 'link' ? 'primary' : 'tertiary',
+								onClick: () => setActiveTab('link')
+							}, 'Image Link')
+						),
+
+						wp.element.createElement('div', { style: { fontWeight: '600', marginBottom: '12px' } },
+							isLinkMode ? 'Dynamic Link Settings' : 'Dynamic Content Settings'
+						),
+
+						wp.element.createElement(SelectControl, {
+							label: 'Source',
+							value: currentSettings.source || '',
+							options: [
+								{ label: 'Select Source...', value: '' },
+								{ label: 'Post Meta', value: 'post-meta' },
+								{ label: 'Post Data', value: 'post-data' },
+								{ label: 'Secure Custom Fields', value: 'scf' },
+							],
+							onChange: (val) => updateDynamicTag('source', val),
+						}),
+
+						(currentSettings.source === 'post-meta') && wp.element.createElement('div', { style: { marginBottom: '16px', borderLeft: '2px solid #ddd', paddingLeft: '10px' } },
+							wp.element.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' } },
+								wp.element.createElement('label', { style: { fontSize: '11px', fontWeight: '500', textTransform: 'uppercase' } }, 'Meta Key'),
 								wp.element.createElement(Button, {
 									isSmall: true,
-									variant: activeTab === 'content' ? 'primary' : 'tertiary',
-									onClick: () => setActiveTab('content'),
-									style: { marginRight: '10px' }
-								}, 'Image Source'),
-								wp.element.createElement(Button, {
-									isSmall: true,
-									variant: activeTab === 'link' ? 'primary' : 'tertiary',
-									onClick: () => setActiveTab('link')
-								}, 'Image Link')
+									variant: 'secondary',
+									onClick: fetchMetaKeys,
+									disabled: isLoadingKeys
+								}, isLoadingKeys ? 'Loading...' : 'Refresh Keys')
 							),
 
-							// Header
-							wp.element.createElement('div', { style: { fontWeight: '600', marginBottom: '12px' } },
-								isLinkMode ? 'Dynamic Link Settings' : 'Dynamic Content Settings'
-							),
+							fetchError && wp.element.createElement('div', { style: { color: '#cc1818', fontSize: '12px', marginBottom: '8px' } }, 'Error: ' + fetchError),
 
-							// Source Select
 							wp.element.createElement(SelectControl, {
-								label: 'Source',
-								value: currentSettings.source || '',
+								value: dropdownValue,
 								options: [
-									{ label: 'Select Source...', value: '' },
-									{ label: 'Post Meta', value: 'post-meta' },
-									{ label: 'Post Data', value: 'post-data' },
+									{ label: 'Select Field...', value: '' },
+									...metaOptions,
+									{ label: 'Custom Key...', value: 'custom' }
 								],
-								onChange: (val) => updateDynamicTag('source', val),
-							}),
-
-							// Post Meta Section
-							(currentSettings.source === 'post-meta') && wp.element.createElement('div', { style: { marginBottom: '16px', borderLeft: '2px solid #ddd', paddingLeft: '10px' } },
-
-								// Header for Keys
-								wp.element.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' } },
-									wp.element.createElement('label', { style: { fontSize: '11px', fontWeight: '500', textTransform: 'uppercase' } }, 'Meta Key'),
-									wp.element.createElement(Button, {
-										isSmall: true,
-										variant: 'secondary',
-										onClick: fetchMetaKeys,
-										disabled: isLoadingKeys
-									}, isLoadingKeys ? 'Loading...' : 'Refresh Keys')
-								),
-
-								// Error Message
-								fetchError && wp.element.createElement('div', { style: { color: '#cc1818', fontSize: '12px', marginBottom: '8px' } }, 'Error: ' + fetchError),
-
-								// Dropdown
-								wp.element.createElement(SelectControl, {
-									value: dropdownValue,
-									options: [
-										{ label: 'Select Field...', value: '' },
-										...metaOptions,
-										{ label: 'Custom Key...', value: 'custom' }
-									],
-									onChange: (val) => {
-										if (val !== 'custom') updateDynamicTag('key', val);
-									},
-								}),
-
-								// Custom Input
-								(dropdownValue === 'custom') && wp.element.createElement(TextControl, {
-									placeholder: 'Enter custom meta key...',
-									value: currentSettings.key || '',
-									onChange: (val) => updateDynamicTag('key', val),
-									help: 'Type the exact meta key name from the database.'
-								})
-							),
-
-							// Post Data Helper
-							(currentSettings.source === 'post-data') && wp.element.createElement(SelectControl, {
-								label: 'Field',
-								value: currentSettings.key,
-								options: currentPostDataOptions,
-								onChange: (val) => updateDynamicTag('key', val),
-							}),
-
-							// Fallback
-							wp.element.createElement(TextControl, {
-								label: 'Fallback Text',
-								value: currentSettings.fallback || '',
-								onChange: (val) => updateDynamicTag('fallback', val),
-							}),
-
-							// Advanced Formatting Toggle
-							wp.element.createElement('div', { style: { marginTop: '10px', borderTop: '1px solid #eee', paddingTop: '10px' } },
-								wp.element.createElement(Button, {
-									isLink: true,
-									onClick: () => setShowAdvanced(!showAdvanced),
-									icon: showAdvanced ? 'arrow-up-alt2' : 'arrow-down-alt2',
-									style: { width: '100%', justifyContent: 'space-between', padding: '0 5px' }
-								}, 'Advanced Settings')
-							),
-
-							showAdvanced && wp.element.createElement('div', { style: { marginTop: '10px', padding: '10px', background: '#f9f9f9', borderRadius: '4px' } },
-
-								// Prefix/Suffix
-								wp.element.createElement('div', { style: { display: 'flex', gap: '8px' } },
-									wp.element.createElement('div', { style: { flex: 1 } },
-										wp.element.createElement(TextControl, {
-											label: 'Prefix',
-											value: currentSettings.prefix || '',
-											onChange: (val) => updateDynamicTag('prefix', val),
-										})
-									),
-									wp.element.createElement('div', { style: { flex: 1 } },
-										wp.element.createElement(TextControl, {
-											label: 'Suffix',
-											value: currentSettings.suffix || '',
-											onChange: (val) => updateDynamicTag('suffix', val),
-										})
-									)
-								),
-
-								// Date Format
-								isDateField && wp.element.createElement(SelectControl, {
-									label: 'Date Format',
-									value: currentSettings.dateFormat || '',
-									options: [
-										{ label: 'Default', value: '' },
-										{ label: 'F j, Y (July 30, 2025)', value: 'F j, Y' },
-										{ label: 'Y-m-d (2025-07-30)', value: 'Y-m-d' },
-										{ label: 'd/m/Y (30/07/2025)', value: 'd/m/Y' },
-										{ label: 'm/d/Y (07/30/2025)', value: 'm/d/Y' },
-									],
-									onChange: (val) => updateDynamicTag('dateFormat', val),
-								}),
-
-								// Number Format
-								isNumberField && wp.element.createElement(TextControl, {
-									label: 'Decimals',
-									type: 'number',
-									min: 0,
-									max: 5,
-									value: currentSettings.numberDecimals || '',
-									onChange: (val) => updateDynamicTag('numberDecimals', val),
-								})
-							),
-
-							// Remove Button
-							currentSettings.enable && wp.element.createElement(
-								Button,
-								{
-									isDestructive: true,
-									variant: 'link',
-									onClick: removeDynamicTag,
-									style: { width: '100%', textAlign: 'center' }
+								onChange: (val) => {
+									if (val !== 'custom') updateDynamicTag('key', val);
 								},
-								'Remove Dynamic Tag'
-							)
+							}),
+
+							(dropdownValue === 'custom') && wp.element.createElement(TextControl, {
+								placeholder: 'Enter custom meta key...',
+								value: currentSettings.key || '',
+								onChange: (val) => updateDynamicTag('key', val),
+								help: 'Type the exact meta key name from the database.'
+							})
+						),
+
+						// SCF Section
+						(currentSettings.source === 'scf') && wp.element.createElement('div', { style: { marginBottom: '16px', borderLeft: '2px solid #2271b1', paddingLeft: '10px' } },
+							wp.element.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' } },
+								wp.element.createElement('label', { style: { fontSize: '11px', fontWeight: '500', textTransform: 'uppercase' } }, 'SCF Field'),
+								wp.element.createElement(Button, {
+									isSmall: true,
+									variant: 'secondary',
+									onClick: fetchSCFFields,
+									disabled: isLoadingSCF
+								}, isLoadingSCF ? 'Loading...' : 'Refresh')
+							),
+
+							wp.element.createElement(SelectControl, {
+								value: currentSettings.key,
+								options: [
+									{ label: 'Select SCF Field...', value: '' },
+									...scfOptions
+								],
+								onChange: (val) => updateDynamicTag('key', val),
+							})
+						),
+
+						(currentSettings.source === 'post-data') && wp.element.createElement(SelectControl, {
+							label: 'Field',
+							value: currentSettings.key,
+							options: currentPostDataOptions,
+							onChange: (val) => updateDynamicTag('key', val),
+						}),
+
+						wp.element.createElement(TextControl, {
+							label: 'Fallback Text',
+							value: currentSettings.fallback || '',
+							onChange: (val) => updateDynamicTag('fallback', val),
+						}),
+
+						wp.element.createElement('div', { style: { marginTop: '10px', borderTop: '1px solid #eee', paddingTop: '10px' } },
+							wp.element.createElement(Button, {
+								isLink: true,
+								onClick: () => setShowAdvanced(!showAdvanced),
+								icon: showAdvanced ? 'arrow-up-alt2' : 'arrow-down-alt2',
+								style: { width: '100%', justifyContent: 'space-between', padding: '0 5px' }
+							}, 'Advanced Settings')
+						),
+
+						showAdvanced && wp.element.createElement('div', { style: { marginTop: '10px', padding: '10px', background: '#f9f9f9', borderRadius: '4px' } },
+							wp.element.createElement('div', { style: { display: 'flex', gap: '8px' } },
+								wp.element.createElement('div', { style: { flex: 1 } },
+									wp.element.createElement(TextControl, {
+										label: 'Prefix',
+										value: currentSettings.prefix || '',
+										onChange: (val) => updateDynamicTag('prefix', val),
+									})
+								),
+								wp.element.createElement('div', { style: { flex: 1 } },
+									wp.element.createElement(TextControl, {
+										label: 'Suffix',
+										value: currentSettings.suffix || '',
+										onChange: (val) => updateDynamicTag('suffix', val),
+									})
+								)
+							),
+
+							isDateField && wp.element.createElement(SelectControl, {
+								label: 'Date Format',
+								value: currentSettings.dateFormat || '',
+								options: [
+									{ label: 'Default', value: '' },
+									{ label: 'F j, Y (July 30, 2025)', value: 'F j, Y' },
+									{ label: 'Y-m-d (2025-07-30)', value: 'Y-m-d' },
+									{ label: 'd/m/Y (30/07/2025)', value: 'd/m/Y' },
+									{ label: 'm/d/Y (07/30/2025)', value: 'm/d/Y' },
+								],
+								onChange: (val) => updateDynamicTag('dateFormat', val),
+							}),
+
+							isNumberField && wp.element.createElement(TextControl, {
+								label: 'Decimals',
+								type: 'number',
+								min: 0,
+								max: 5,
+								value: currentSettings.numberDecimals || '',
+								onChange: (val) => updateDynamicTag('numberDecimals', val),
+							})
+						),
+
+						currentSettings.enable && wp.element.createElement(
+							Button,
+							{
+								isDestructive: true,
+								variant: 'link',
+								onClick: removeDynamicTag,
+								style: { width: '100%', textAlign: 'center' }
+							},
+							'Remove Dynamic Tag'
 						)
 					)
 				)
@@ -491,8 +513,11 @@
 
 		// Internal state for Meta Keys
 		const [metaOptions, setMetaOptions] = useState([]);
+		const [scfOptions, setSCFOptions] = useState([]);
 		const [isLoadingKeys, setIsLoadingKeys] = useState(false);
+		const [isLoadingSCF, setIsLoadingSCF] = useState(false);
 		const [keysLoaded, setKeysLoaded] = useState(false);
+		const [scfLoaded, setSCFLoaded] = useState(false);
 
 		const togglePopover = () => {
 			setIsPopoverOpen(!isPopoverOpen);
@@ -519,9 +544,27 @@
 				});
 		};
 
+		const fetchSCFFields = () => {
+			setIsLoadingSCF(true);
+			apiFetch({ path: '/dynamic-tags-lite/v1/scf-fields' })
+				.then((options) => {
+					setSCFOptions(options);
+					setSCFLoaded(true);
+					setIsLoadingSCF(false);
+				})
+				.catch((err) => {
+					console.error('DTL Link: SCF Fetch error', err);
+					setIsLoadingSCF(false);
+				});
+		};
+
 		useEffect(() => {
-			if (isPopoverOpen && attributes.source === 'post-meta' && !keysLoaded) {
-				fetchMetaKeys();
+			if (isPopoverOpen && !isLoadingKeys && !isLoadingSCF) {
+				if (attributes.source === 'post-meta' && !keysLoaded) {
+					fetchMetaKeys();
+				} else if (attributes.source === 'scf' && !scfLoaded) {
+					fetchSCFFields();
+				}
 			}
 		}, [isPopoverOpen, attributes.source]);
 
@@ -579,6 +622,7 @@
 							{ label: 'Select Source...', value: '' },
 							{ label: 'Post Meta', value: 'post-meta' },
 							{ label: 'Post Data', value: 'post-data' },
+							{ label: 'Secure Custom Fields', value: 'scf' },
 						],
 						onChange: (val) => setAttributes({ ...attributes, source: val })
 					}),
@@ -603,6 +647,16 @@
 						label: 'Data Field',
 						value: attributes.key,
 						options: postDataOptions,
+						onChange: (val) => setAttributes({ ...attributes, key: val })
+					}),
+
+					(attributes.source === 'scf') && wp.element.createElement(SelectControl, {
+						label: 'SCF Field',
+						value: attributes.key,
+						options: [
+							{ label: 'Select SCF Field...', value: '' },
+							...scfOptions
+						],
 						onChange: (val) => setAttributes({ ...attributes, key: val })
 					}),
 

@@ -23,6 +23,12 @@ class Manager {
 			'callback'            => [ $this, 'get_value_rest' ],
 			'permission_callback' => '__return_true',
 		] );
+
+		register_rest_route( 'dynamic-tags-lite/v1', '/scf-fields', [
+			'methods'             => 'GET',
+			'callback'            => [ $this, 'get_scf_fields' ],
+			'permission_callback' => '__return_true',
+		] );
 	}
 
 	public function get_meta_keys() {
@@ -126,9 +132,49 @@ class Manager {
 					return $post->$key;
 				}
 				break;
+
+			case 'scf':
+				if ( ! function_exists( 'get_field' ) ) {
+					return null;
+				}
+
+				$value = get_field( $key, $context );
+
+				// Handle image/file arrays from SCF
+				if ( is_array( $value ) && isset( $value['url'] ) ) {
+					return $value['url'];
+				}
+
+				return $value;
 		}
 
 		return null;
+	}
+
+	public function get_scf_fields() {
+		if ( ! function_exists( 'acf_get_field_groups' ) ) {
+			return rest_ensure_response( [] );
+		}
+
+		$options = [];
+		$groups  = acf_get_field_groups();
+
+		foreach ( $groups as $group ) {
+			$fields = acf_get_fields( $group['ID'] );
+			if ( ! $fields ) {
+				continue;
+			}
+
+			foreach ( $fields as $field ) {
+				$options[] = [
+					'label' => $field['label'] . ' (' . $field['name'] . ')',
+					'value' => $field['name'],
+					'group' => $group['title'],
+				];
+			}
+		}
+
+		return rest_ensure_response( $options );
 	}
 
 	public function get_value_rest( $request ) {
@@ -155,8 +201,54 @@ class Manager {
 		}
 
 		return rest_ensure_response( [
-			'value'           => $value,
-			'formatted_value' => $formatted_value,
+			'value' => $value,
 		] );
+	}
+
+	/**
+	 * Apply prefix, suffix, date and number formatting to a dynamic value.
+	 */
+	public function apply_formatting( $value, $settings ) {
+		if ( empty( $value ) && empty( $settings['prefix'] ) && empty( $settings['suffix'] ) ) {
+			return $value;
+		}
+
+		// 1. Array Value Handling
+		if ( is_array( $value ) ) {
+			$value = implode( ', ', $value );
+		}
+
+		// 2. Date Formatting
+		if ( ! empty( $settings['dateFormat'] ) ) {
+			$timestamp = false;
+			if ( is_numeric( $value ) ) {
+				$timestamp = $value;
+			} else {
+				// Try parsing European/Vietnamese formats (d/m/Y) by replacing / with - for strtotime
+				$normalized_value = str_replace( '/', '-', (string) $value );
+				$timestamp = strtotime( $normalized_value );
+				
+				// Fallback if still false
+				if ( ! $timestamp ) {
+					$timestamp = strtotime( (string) $value );
+				}
+			}
+			
+			if ( $timestamp ) {
+				$value = wp_date( $settings['dateFormat'], $timestamp );
+			}
+		}
+
+		// 3. Number Formatting
+		if ( isset( $settings['numberDecimals'] ) && $settings['numberDecimals'] !== '' ) {
+			$decimals = intval( $settings['numberDecimals'] );
+			$value = number_format_i18n( floatval( $value ), $decimals );
+		}
+
+		// 4. Prefix & Suffix
+		$prefix = isset( $settings['prefix'] ) ? $settings['prefix'] : '';
+		$suffix = isset( $settings['suffix'] ) ? $settings['suffix'] : '';
+		
+		return $prefix . $value . $suffix;
 	}
 }
