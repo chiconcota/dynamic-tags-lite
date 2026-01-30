@@ -2,6 +2,14 @@
 
 Lightweight and powerful dynamic tags for the WordPress Block Editor (Gutenberg).
 
+## Table of Contents
+
+- [Features](#features)
+- [Version History](#version-history)
+- [Installation](#installation)
+- [How to Use](#how-to-use)
+- [License](#license)
+
 ## Features
 
 - **Gutenberg Integration**: Add dynamic content to Paragraph, Heading, Image, Video, and Button blocks directly from the editor toolbar.
@@ -41,6 +49,29 @@ Lightweight and powerful dynamic tags for the WordPress Block Editor (Gutenberg)
 ### v1.7.0
 - Added: Phase 2 features (Prefix, Suffix, Date & Number formatting).
 - Added: Advanced Settings UI in block popover.
+
+## How to Use
+
+### 1. Basic Dynamic Tags
+1. Select a paragraph, heading, button, or image block.
+2. Click the **Database Icon** in the block toolbar.
+3. Choose a **Source** (Post Meta, Post Data, etc.).
+4. Select the specific field.
+5. (Optional) Configure **Advanced Settings** (Prefix, Suffix, Formatting).
+
+### 2. Live Preview
+- Once configured, the editor will display the actual value from the database instead of a placeholder.
+- Use the **Show Original** toggle to switch back to the technical placeholder (e.g., `%% meta_key %%`) if you need to edit the surrounding text.
+
+### 3. Visibility Settings (NEW)
+- Open the visibility section in the popover.
+- Toggle **Hide if Empty** to prevent the block from rendering if no data is found.
+- Use **Display Conditions** to show blocks only when specific criteria are met (e.g., "Price > 100").
+
+### 4. Inline Dynamic Links
+- Highlight a piece of text within a block.
+- Click the **Dynamic Link icon** (link with a sparkle) in the formatting bar.
+- Configure the source and key for the link destination.
 
 ## Installation
 
