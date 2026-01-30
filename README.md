@@ -5,17 +5,19 @@ Lightweight and powerful dynamic tags for the WordPress Block Editor (Gutenberg)
 ## Features
 
 - **Gutenberg Integration**: Add dynamic content to Paragraph, Heading, Image, Video, and Button blocks directly from the editor toolbar.
-- **Live Preview (v1.8.0)**: See real formatted dynamic values in the editor while you type. Switch back to placeholders anytime with the "Show Original" toggle.
+- **Live Preview**: See real formatted dynamic values in the editor while you type. Switch back to placeholders anytime with the "Show Original" toggle.
+- **Conditional Display (v1.9.0)**: Hide blocks if the dynamic value is empty or based on comparison rules (Equals, Not Equals, Contains, Greater/Less Than).
 - **Data Sources**: 
-  - **Secure Custom Fields (v1.8.0)**: Fully integrated with SCF/ACF. Select fields from a pre-loaded dropdown list.
+  - **Secure Custom Fields (SCF/ACF)**: Pre-loaded dropdown for easy field selection.
+  - **Current User**: Display info about the logged-in user (Display Name, Email, ID, User Meta).
+  - **Post Data**: Core post fields PLUS Author Bio and Author Social Meta.
   - **Post Meta**: Fetch any custom field value by its key.
-  - **Post Data**: Fetch core post fields like Date, Author, Categories, Permalink, etc.
 - **Advanced Formatting**:
   - **Prefix & Suffix**: Add text before or after dynamic values.
-  - **Date Formatting**: Choose from common date formats or let the plugin handle local date styles.
-  - **Number Formatting**: Set decimal places for numeric values (prices, counts, IDs).
-- **Inline Dynamic Links**: Turn any text selection into a dynamic link that updates automatically.
-- **Frontend Performance**: Zero-dependency frontend rendering.
+  - **Date Formatting**: Support for local and common formats (e.g., d/m/Y, July 30, 2025).
+  - **Number Formatting**: Decimals control for prices and counts.
+- **Inline Dynamic Links**: Convert any text selection into a dynamic link.
+- **Performance**: Zero-dependency frontend rendering for maximum speed.
 
 ## Version History
 
