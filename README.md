@@ -4,11 +4,22 @@ Lightweight and powerful dynamic tags for the WordPress Block Editor (Gutenberg)
 
 ## Table of Contents
 
+- [Why Dynamic Tags Lite?](#why-dynamic-tags-lite)
 - [Features](#features)
-- [Version History](#version-history)
-- [Installation](#installation)
+- [Requirements](#requirements)
+- [Supported Blocks](#supported-blocks)
 - [How to Use](#how-to-use)
+- [Security & Performance](#security--performance)
+- [Installation](#installation)
+- [Version History](#version-history)
 - [License](#license)
+
+## Why Dynamic Tags Lite?
+
+- **Lightweight**: No bloat. No heavy external libraries. Just pure WordPress-native logic.
+- **Fast**: All rendering happens server-side with zero-dependency CSS or JS on the frontend.
+- **Modern**: Fully integrated with the Gutenberg Block Editor using standard WordPress components.
+- **Developer-Ready**: Built with PHP 8.2+ standards and PSR-4 namespacing.
 
 ## Features
 
@@ -43,29 +54,6 @@ Currently, the following core blocks are supported with the dynamic tags icon in
 - **Button** (`core/button`) - Supports dynamic text.
 - **Inline Text**: Any block that supports the RichText toolbar (using Dynamic Link format).
 
-## Version History
-
-### v1.9.0
-- Added: **Phase 4: Conditional Display**. Hide blocks if empty or based on comparison logic.
-- Added: Visibility Settings section in block popover.
-- Improved: Enhanced `render_block` filter for robust visibility control.
-
-### v1.8.0
-- Added: **Phase 3: Context Expansion** (Current User & Post Author fields).
-- Added: **Phase 3.5: Secure Custom Fields (SCF) Integration**.
-- Added: Smart field selection dropdown for SCF sources.
-- Added: **Phase 2.5: Live Preview** in Gutenberg editor with debounced fetching.
-- Improved: Centralized formatting logic in `Manager` class.
-
-### v1.7.1
-- Fix: Critical dashboard crash and editor syntax errors.
-- Improved: Robust text replacement logic for placeholders like `%% key %%`.
-- Added: Enhanced date parsing for European/Vietnamese formats (d/m/Y).
-
-### v1.7.0
-- Added: Phase 2 features (Prefix, Suffix, Date & Number formatting).
-- Added: Advanced Settings UI in block popover.
-
 ## How to Use
 
 ### 1. Basic Dynamic Tags
@@ -89,11 +77,38 @@ Currently, the following core blocks are supported with the dynamic tags icon in
 - Click the **Dynamic Link icon** (link with a sparkle) in the formatting bar.
 - Configure the source and key for the link destination.
 
+## Security & Performance
+
+- **Security First**: All data is sanitized on input and escaped on output using standard WordPress functions (`esc_html`, `esc_url`, `esc_attr`).
+- **REST API Security**: All data fetching restricted to authorized editors.
+- **HPOS Ready**: Fully compatible with WooCommerce High-Performance Order Storage.
+- **Caching Friendly**: Works seamlessly with Object Cache and Page Cache plugins.
+
 ## Installation
 
 1. Upload the `dynamic-tags-lite` folder to the `/wp-content/plugins/` directory.
 2. Activate the plugin through the 'Plugins' menu in WordPress.
-3. Look for the **Database icon** in the Gutenberg block toolbar.
+3. Edit any post/page and look for the **Database icon** in the block toolbar.
+
+## Version History
+
+### v1.9.0
+- Added: **Phase 4: Conditional Display**. Hide blocks if empty or based on comparison logic.
+- Added: **Phase 3: Context Expansion** (Current User & Post Author fields).
+- Added: **Phase 3.5: Secure Custom Fields (SCF) Integration**.
+- Added: **Phase 2.5: Live Preview** in Gutenberg editor.
+- Improved: Centralized formatting logic in `Manager` class.
+
+### v1.7.1
+- Fix: Critical dashboard crash and editor syntax errors.
+- Added: Enhanced date parsing for European/Vietnamese formats (d/m/Y).
+
+### v1.7.0
+- Added: Phase 2 features (Prefix, Suffix, Date & Number formatting).
+
+## Support
+
+If you encounter any issues or have feature requests, please open an issue on the GitHub repository or contact the developer.
 
 ## License
 
