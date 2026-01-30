@@ -27,6 +27,22 @@ Lightweight and powerful dynamic tags for the WordPress Block Editor (Gutenberg)
 - **Inline Dynamic Links**: Convert any text selection into a dynamic link.
 - **Performance**: Zero-dependency frontend rendering for maximum speed.
 
+## Requirements
+
+- **WordPress**: 6.0 or higher
+- **PHP**: 7.4 or higher (8.2+ recommended)
+- **Optional**: [Secure Custom Fields (SCF)](https://wordpress.org/plugins/advanced-custom-fields/) or ACF for enhanced data source capabilities.
+
+## Supported Blocks
+
+Currently, the following core blocks are supported with the dynamic tags icon in the toolbar:
+- **Paragraph** (`core/paragraph`)
+- **Heading** (`core/heading`)
+- **Image** (`core/image`) - Supports dynamic src and dynamic links.
+- **Video** (`core/video`) - Supports dynamic src.
+- **Button** (`core/button`) - Supports dynamic text.
+- **Inline Text**: Any block that supports the RichText toolbar (using Dynamic Link format).
+
 ## Version History
 
 ### v1.9.0
