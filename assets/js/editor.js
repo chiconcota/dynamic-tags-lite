@@ -32,7 +32,10 @@
 					suffix: '',
 					dateFormat: '',
 					numberDecimals: '',
-					showPreview: true
+					showPreview: true,
+					hideIfEmpty: false,
+					condition: 'always',
+					compareValue: ''
 				},
 			}
 		};
@@ -72,8 +75,8 @@
 			}
 
 			// Settings
-			const dynamicTag = attributes.dynamicTag || { enable: false, source: '', key: '', fallback: '', prefix: '', suffix: '', dateFormat: '', numberDecimals: '', showPreview: true };
-			const dynamicLink = attributes.dynamicLink || { enable: false, source: '', key: '', fallback: '', prefix: '', suffix: '', dateFormat: '', numberDecimals: '', showPreview: true };
+			const dynamicTag = attributes.dynamicTag || { enable: false, source: '', key: '', fallback: '', prefix: '', suffix: '', dateFormat: '', numberDecimals: '', showPreview: true, hideIfEmpty: false, condition: 'always', compareValue: '' };
+			const dynamicLink = attributes.dynamicLink || { enable: false, source: '', key: '', fallback: '', prefix: '', suffix: '', dateFormat: '', numberDecimals: '', showPreview: true, hideIfEmpty: false, condition: 'always', compareValue: '' };
 
 			// UI State
 			const [isPopoverOpen, setIsPopoverOpen] = useState(false);
@@ -86,6 +89,7 @@
 			const [keysLoaded, setKeysLoaded] = useState(false);
 			const [scfLoaded, setSCFLoaded] = useState(false);
 			const [showAdvanced, setShowAdvanced] = useState(false);
+			const [showVisibility, setShowVisibility] = useState(false);
 
 			const togglePopover = () => setIsPopoverOpen(!isPopoverOpen);
 
@@ -223,6 +227,9 @@
 				dynamicTag.suffix,
 				dynamicTag.dateFormat,
 				dynamicTag.numberDecimals,
+				dynamicTag.hideIfEmpty,
+				dynamicTag.condition,
+				dynamicTag.compareValue,
 				dynamicLink.enable,
 				dynamicLink.source,
 				dynamicLink.key
@@ -251,7 +258,7 @@
 			};
 
 			const removeDynamicTag = () => {
-				const empty = { enable: false, source: '', key: '', fallback: '', prefix: '', suffix: '', dateFormat: '', numberDecimals: '', showPreview: true };
+				const empty = { enable: false, source: '', key: '', fallback: '', prefix: '', suffix: '', dateFormat: '', numberDecimals: '', showPreview: true, hideIfEmpty: false, condition: 'always', compareValue: '' };
 				if (isLinkMode) {
 					setAttributes({ dynamicLink: empty, href: '' });
 				} else {
@@ -515,6 +522,44 @@
 								max: 5,
 								value: currentSettings.numberDecimals || '',
 								onChange: (val) => updateDynamicTag('numberDecimals', val),
+							})
+						),
+
+						wp.element.createElement('div', { style: { marginTop: '10px', borderTop: '1px solid #eee', paddingTop: '10px' } },
+							wp.element.createElement(Button, {
+								isLink: true,
+								onClick: () => setShowVisibility(!showVisibility),
+								icon: showVisibility ? 'arrow-up-alt2' : 'arrow-down-alt2',
+								style: { width: '100%', justifyContent: 'space-between', padding: '0 5px' }
+							}, 'Visibility Settings')
+						),
+
+						showVisibility && wp.element.createElement('div', { style: { marginTop: '10px', padding: '10px', background: '#f0f6fb', borderRadius: '4px', borderLeft: '3px solid #007cba' } },
+							wp.element.createElement(wp.components.ToggleControl, {
+								label: 'Hide if Empty',
+								checked: currentSettings.hideIfEmpty || false,
+								onChange: (val) => updateDynamicTag('hideIfEmpty', val),
+								help: 'Hide the entire block if the value is empty.'
+							}),
+
+							wp.element.createElement(SelectControl, {
+								label: 'Display Condition',
+								value: currentSettings.condition || 'always',
+								options: [
+									{ label: 'Always Show', value: 'always' },
+									{ label: 'Show if equals', value: 'equals' },
+									{ label: 'Show if not equals', value: 'not_equals' },
+									{ label: 'Show if contains', value: 'contains' },
+									{ label: 'Show if greater than', value: 'greater_than' },
+									{ label: 'Show if less than', value: 'less_than' },
+								],
+								onChange: (val) => updateDynamicTag('condition', val),
+							}),
+
+							(currentSettings.condition && currentSettings.condition !== 'always') && wp.element.createElement(TextControl, {
+								label: 'Value to Compare',
+								value: currentSettings.compareValue || '',
+								onChange: (val) => updateDynamicTag('compareValue', val),
 							})
 						),
 

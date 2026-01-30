@@ -43,7 +43,10 @@ class Gutenberg_Integration {
 					'suffix' => '',
 					'dateFormat' => '',
 					'numberDecimals' => '',
-					'showPreview' => true
+					'showPreview' => true,
+					'hideIfEmpty' => false,
+					'condition' => 'always',
+					'compareValue' => ''
 				],
 			];
 
@@ -110,6 +113,39 @@ class Gutenberg_Integration {
 		}
 
 		$value = Plugin::instance()->manager->get_value( $setting['source'], $setting['key'] );
+
+		// Visibility Check
+		if ( ! empty( $setting['hideIfEmpty'] ) && empty( $value ) ) {
+			return '';
+		}
+
+		if ( ! empty( $setting['condition'] ) && 'always' !== $setting['condition'] ) {
+			$condition = $setting['condition'];
+			$compare_value = isset( $setting['compareValue'] ) ? $setting['compareValue'] : '';
+			$should_show = true;
+
+			switch ( $condition ) {
+				case 'equals':
+					$should_show = ( (string) $value === (string) $compare_value );
+					break;
+				case 'not_equals':
+					$should_show = ( (string) $value !== (string) $compare_value );
+					break;
+				case 'contains':
+					$should_show = ( strpos( (string) $value, (string) $compare_value ) !== false );
+					break;
+				case 'greater_than':
+					$should_show = ( floatval( $value ) > floatval( $compare_value ) );
+					break;
+				case 'less_than':
+					$should_show = ( floatval( $value ) < floatval( $compare_value ) );
+					break;
+			}
+
+			if ( ! $should_show ) {
+				return '';
+			}
+		}
 
 		if ( empty( $value ) && ! empty( $setting['fallback'] ) ) {
 			$value = $setting['fallback'];

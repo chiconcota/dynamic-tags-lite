@@ -19,6 +19,11 @@ Lightweight and powerful dynamic tags for the WordPress Block Editor (Gutenberg)
 
 ## Version History
 
+### v1.9.0
+- Added: **Phase 4: Conditional Display**. Hide blocks if empty or based on comparison logic.
+- Added: Visibility Settings section in block popover.
+- Improved: Enhanced `render_block` filter for robust visibility control.
+
 ### v1.8.0
 - Added: **Phase 3: Context Expansion** (Current User & Post Author fields).
 - Added: **Phase 3.5: Secure Custom Fields (SCF) Integration**.
