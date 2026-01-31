@@ -26,6 +26,7 @@ Lightweight and powerful dynamic tags for the WordPress Block Editor (Gutenberg)
 - **Gutenberg Integration**: Add dynamic content to Paragraph, Heading, Image, Video, and Button blocks directly from the editor toolbar.
 - **Live Preview**: See real formatted dynamic values in the editor while you type. Switch back to placeholders anytime with the "Show Original" toggle.
 - **Conditional Display (v1.9.0)**: Hide blocks if the dynamic value is empty or based on comparison rules (Equals, Not Equals, Contains, Greater/Less Than).
+- **Query Loop Support (v1.11.0)**: Fully compatible with WordPress Query Loop and Product Collection blocks. Data automatically syncs with each item in the list.
 - **Data Sources**: 
   - **WooCommerce (v1.10.0)**: Fetch product prices, SKU, stock, ratings, and cart information.
   - **Secure Custom Fields (SCF/ACF)**: Pre-loaded dropdown for easy field selection.
@@ -93,6 +94,10 @@ Currently, the following core blocks are supported with the dynamic tags icon in
 3. Edit any post/page and look for the **Database icon** in the block toolbar.
 
 ## Version History
+
+### v1.11.0
+- Added: **Phase 6: Block Context & Loop Optimization**. Blocks now correctly identify the current post ID when used inside Query Loops.
+- Improved: Enhanced compatibility with nested blocks and template parts.
 
 ### v1.10.0
 - Added: **Phase 5: WooCommerce Integration**. Support for Product prices, SKU, Stock, Ratings, and Cart data.

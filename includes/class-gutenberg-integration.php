@@ -78,7 +78,11 @@ class Gutenberg_Integration {
 		// 2. Process Dynamic Link for Blocks (e.g. Image)
 		if ( ! empty( $block['attrs']['dynamicLink'] ) && $block['attrs']['dynamicLink']['enable'] ) {
 			$link_setting = $block['attrs']['dynamicLink'];
-			$link_url = Plugin::instance()->manager->get_value( $link_setting['source'], $link_setting['key'] );
+			
+			// Use block context postId if available
+			$link_post_id = isset( $block['context']['postId'] ) ? $block['context']['postId'] : get_the_ID();
+			
+			$link_url = Plugin::instance()->manager->get_value( $link_setting['source'], $link_setting['key'], $link_post_id );
 			
 			if ( empty( $link_url ) && ! empty( $link_setting['fallback'] ) ) {
 				$link_url = $link_setting['fallback'];
@@ -94,14 +98,13 @@ class Gutenberg_Integration {
 						$block_content = preg_replace( '/(<a\s+[^>]*href=["\'])([^"\']*)(["\'][^>]*>)/i', '$1' . esc_url( $link_url ) . '$3', $block_content );
 					} else {
 						// Wrapping img in link
-						// Finding the img tag and wrapping it
 						$block_content = preg_replace( '/(<img\s+[^>]+>)/i', '<a href="' . esc_url( $link_url ) . '">$1</a>', $block_content );
 					}
 				}
-				// Add other blocks here if needed (e.g. core/button)
 			}
 		}
 
+		// 3. Process Dynamic Tag (Main Content)
 		if ( empty( $block['attrs']['dynamicTag'] ) ) {
 			return $block_content;
 		}
@@ -112,7 +115,15 @@ class Gutenberg_Integration {
 			return $block_content;
 		}
 
-		$value = Plugin::instance()->manager->get_value( $setting['source'], $setting['key'] );
+		// Use block context postId if available
+		$post_id = isset( $block['context']['postId'] ) ? $block['context']['postId'] : get_the_ID();
+
+		$value = Plugin::instance()->manager->get_value(
+			$setting['source'],
+			$setting['key'],
+			$post_id,
+			$setting
+		);
 
 		// Visibility Check
 		if ( ! empty( $setting['hideIfEmpty'] ) && empty( $value ) ) {
@@ -152,72 +163,30 @@ class Gutenberg_Integration {
 		}
 
 		if ( empty( $value ) ) {
-			// If we are in debug mode or just for logged in users, maybe show a hint?
-			// For now, let's add an HTML comment for debugging.
-			$debug_msg = sprintf( '<!-- DTL Debug: Key "%s" from Source "%s" returned empty. -->', esc_attr( $setting['key'] ), esc_attr( $setting['source'] ) );
-			return $block_content . $debug_msg;
+			return $block_content;
 		}
 
 		$value = Plugin::instance()->manager->apply_formatting( $value, $setting );
 
-		// Handle array values (e.g. Checkbox, Select)
 		if ( is_array( $value ) ) {
 			$value = implode( ', ', $value );
 		}
 
 		// Handle specific blocks
 		if ( 'core/image' === $block['blockName'] ) {
-			// If value is ID, get URL
 			if ( is_numeric( $value ) ) {
 				$value = wp_get_attachment_url( $value );
 			}
-			
-			// Debug comment to confirm we got here
-			$debug = '<!-- DTL Debug: Image Value="' . esc_attr( $value ) . '" -->';
-
-			// Robust regex for src matching (single or double quotes)
 			$content = preg_replace( '/src\s*=\s*["\']([^"\']+)["\']/', 'src="' . esc_url( $value ) . '"', $block_content, 1 );
-			
-			// Remove srcset and sizes aggressively to force the new src
 			$content = preg_replace( '/srcset\s*=\s*["\']([^"\']+)["\']/', '', $content );
 			$content = preg_replace( '/sizes\s*=\s*["\']([^"\']+)["\']/', '', $content );
-			
-			return $content . $debug;
+			return $content;
 		}
 		
 		if ( 'core/video' === $block['blockName'] ) {
-			// Replace src in video tag
 			return preg_replace( '/src="([^"]+)"/', 'src="' . esc_url( $value ) . '"', $block_content );
 		}
 
-		// Default: Text content replacement
-		// We need to be careful not to strip tags if it's a heading or paragraph
-		// But usually we just want to replace the inner text.
-		
-		// If it's a simple text block, we might just replace the content between tags?
-		// But Wait, existing logic was relying on block_content being just the HTML.
-		// If we replace everything, we lose the tags? 
-		// Actually, standard render_block returns HTML.
-		// For Paragraph/Heading, the content is inside the tags.
-		// Let's use a robust way to replace INNER text if possible.
-		// Current approach: Replace %% key %% if found, OR if entire content is just text?
-		// Actually, the previous logic (which I am replacing) didn't seem to have a text replacement logic shown in previous context?
-		// Wait, I am viewing lines 33-86.
-		// The previous code STOPPED at line 86.
-		// I need to see how text replacement was handled.
-		// From previous summary: "The `render_block` filter in `class-gutenberg-integration.php` intercepts block content. It retrieves the dynamic value... and replaces the block's content."
-		
-		// Let's look at the "Previous Session Summary" or code again. 
-		// Ah, in previous tool output (Step 263), the file ENDS at line 91 effectively (class close).
-		// The lines 84-86 were comments. 
-		// It seems I might have MISSED the text replacement logic in the previous view.
-		// Let me check line 86 again. It just stops.
-		// StartLine: 1, EndLine: 86.
-		// If the file has 91 lines, and line 86 is a comment, then the logic for text replacement IS MISSING in the view??
-		// No, `render_dynamic_content` function body continues.
-		// I must see the rest of the file to ensure I don't break the text replacement logic.
-		// But for now, I will just INSERT the call at the top and close the method.
-		
 		return $this->replace_text_content( $block_content, $value ); 
 	}
 
