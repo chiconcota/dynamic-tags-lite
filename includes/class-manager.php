@@ -156,6 +156,60 @@ class Manager {
 
 				return $value;
 
+			case 'woocommerce':
+				if ( ! class_exists( 'WooCommerce' ) ) {
+					return null;
+				}
+
+				// Handle Cart/Global data first
+				if ( 'cart_contents_count' === $key ) {
+					return ( WC()->cart ) ? WC()->cart->get_cart_contents_count() : 0;
+				}
+
+				if ( 'cart_total' === $key ) {
+					return ( WC()->cart ) ? strip_tags( WC()->cart->get_cart_total() ) : 0;
+				}
+
+				if ( 'cart_url' === $key ) {
+					return function_exists( 'wc_get_cart_url' ) ? wc_get_cart_url() : '';
+				}
+
+				if ( 'checkout_url' === $key ) {
+					return function_exists( 'wc_get_checkout_url' ) ? wc_get_checkout_url() : '';
+				}
+
+				// Product specific data
+				$product = wc_get_product( $context );
+				if ( ! $product ) {
+					return null;
+				}
+
+				switch ( $key ) {
+					case 'price':
+						return $product->get_price();
+					case 'regular_price':
+						return $product->get_regular_price();
+					case 'sale_price':
+						return $product->get_sale_price();
+					case 'formatted_price':
+						return strip_tags( wc_price( $product->get_price() ) );
+					case 'sku':
+						return $product->get_sku();
+					case 'stock_status':
+						return $product->get_stock_status();
+					case 'stock_quantity':
+						return $product->get_stock_quantity();
+					case 'average_rating':
+						return $product->get_average_rating();
+					case 'review_count':
+						return $product->get_review_count();
+					case 'add_to_cart_url':
+						return $product->add_to_cart_url();
+					case 'product_url':
+						return $product->get_permalink();
+				}
+				break;
+
 			case 'current-user':
 				$user = wp_get_current_user();
 				if ( ! $user || 0 === $user->ID ) {

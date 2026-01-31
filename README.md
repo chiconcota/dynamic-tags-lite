@@ -27,6 +27,7 @@ Lightweight and powerful dynamic tags for the WordPress Block Editor (Gutenberg)
 - **Live Preview**: See real formatted dynamic values in the editor while you type. Switch back to placeholders anytime with the "Show Original" toggle.
 - **Conditional Display (v1.9.0)**: Hide blocks if the dynamic value is empty or based on comparison rules (Equals, Not Equals, Contains, Greater/Less Than).
 - **Data Sources**: 
+  - **WooCommerce (v1.10.0)**: Fetch product prices, SKU, stock, ratings, and cart information.
   - **Secure Custom Fields (SCF/ACF)**: Pre-loaded dropdown for easy field selection.
   - **Current User**: Display info about the logged-in user (Display Name, Email, ID, User Meta).
   - **Post Data**: Core post fields PLUS Author Bio and Author Social Meta.
@@ -43,6 +44,7 @@ Lightweight and powerful dynamic tags for the WordPress Block Editor (Gutenberg)
 - **WordPress**: 6.0 or higher
 - **PHP**: 7.4 or higher (8.2+ recommended)
 - **Optional**: [Secure Custom Fields (SCF)](https://wordpress.org/plugins/advanced-custom-fields/) or ACF for enhanced data source capabilities.
+- **Optional**: [WooCommerce](https://wordpress.org/plugins/woocommerce/) for product and shop dynamic data.
 
 ## Supported Blocks
 
@@ -91,6 +93,10 @@ Currently, the following core blocks are supported with the dynamic tags icon in
 3. Edit any post/page and look for the **Database icon** in the block toolbar.
 
 ## Version History
+
+### v1.10.0
+- Added: **Phase 5: WooCommerce Integration**. Support for Product prices, SKU, Stock, Ratings, and Cart data.
+- Added: WooCommerce field selection dropdown in block settings and link popover.
 
 ### v1.9.0
 - Added: **Phase 4: Conditional Display**. Hide blocks if empty or based on comparison logic.

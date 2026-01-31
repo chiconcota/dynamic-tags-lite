@@ -367,6 +367,7 @@
 								{ label: 'Post Meta', value: 'post-meta' },
 								{ label: 'Post Data', value: 'post-data' },
 								{ label: 'Current User', value: 'current-user' },
+								{ label: 'WooCommerce', value: 'woocommerce' },
 								{ label: 'Secure Custom Fields', value: 'scf' },
 							],
 							onChange: (val) => updateDynamicTag('source', val),
@@ -439,6 +440,33 @@
 								value: currentSettings.key.replace('author_meta:', ''),
 								onChange: (val) => updateDynamicTag('key', 'author_meta:' + val),
 								help: 'Metadata of the post author.'
+							})
+						),
+
+						// WooCommerce Section
+						(currentSettings.source === 'woocommerce') && wp.element.createElement('div', { style: { marginBottom: '16px', borderLeft: '2px solid #a46497', paddingLeft: '10px' } },
+							wp.element.createElement(SelectControl, {
+								label: 'Product/Cart Field',
+								value: currentSettings.key,
+								options: [
+									{ label: 'Select WooCommerce Field...', value: '' },
+									{ label: 'Current Price', value: 'price' },
+									{ label: 'Formatted Price', value: 'formatted_price' },
+									{ label: 'Regular Price', value: 'regular_price' },
+									{ label: 'Sale Price', value: 'sale_price' },
+									{ label: 'SKU', value: 'sku' },
+									{ label: 'Stock Status', value: 'stock_status' },
+									{ label: 'Stock Quantity', value: 'stock_quantity' },
+									{ label: 'Average Rating', value: 'average_rating' },
+									{ label: 'Review Count', value: 'review_count' },
+									{ label: 'Add to Cart URL', value: 'add_to_cart_url' },
+									{ label: 'Product URL', value: 'product_url' },
+									{ label: 'Cart Contents Count', value: 'cart_contents_count' },
+									{ label: 'Cart Total', value: 'cart_total' },
+									{ label: 'Cart URL', value: 'cart_url' },
+									{ label: 'Checkout URL', value: 'checkout_url' },
+								],
+								onChange: (val) => updateDynamicTag('key', val),
 							})
 						),
 
@@ -706,6 +734,7 @@
 							{ label: 'Post Meta', value: 'post-meta' },
 							{ label: 'Post Data', value: 'post-data' },
 							{ label: 'Current User', value: 'current-user' },
+							{ label: 'WooCommerce', value: 'woocommerce' },
 							{ label: 'Secure Custom Fields', value: 'scf' },
 						],
 						onChange: (val) => setAttributes({ ...attributes, source: val })
@@ -765,6 +794,19 @@
 							onChange: (val) => setAttributes({ ...attributes, key: val })
 						})
 					),
+
+					(attributes.source === 'woocommerce') && wp.element.createElement(SelectControl, {
+						label: 'WC Field',
+						value: attributes.key,
+						options: [
+							{ label: 'Select WC Field...', value: '' },
+							{ label: 'Product URL', value: 'product_url' },
+							{ label: 'Add to Cart URL', value: 'add_to_cart_url' },
+							{ label: 'Cart URL', value: 'cart_url' },
+							{ label: 'Checkout URL', value: 'checkout_url' },
+						],
+						onChange: (val) => setAttributes({ ...attributes, key: val })
+					}),
 
 					wp.element.createElement('div', { style: { display: 'flex', gap: '8px', marginTop: '16px' } },
 						wp.element.createElement(Button, {
