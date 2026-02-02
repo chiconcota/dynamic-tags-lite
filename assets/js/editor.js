@@ -24,24 +24,17 @@
 			dynamicTag: {
 				type: 'object',
 				default: {
-					enable: false,
-					source: '',
-					key: '',
-					fallback: '',
-					prefix: '',
-					suffix: '',
-					dateFormat: '',
-					numberDecimals: '',
 					showPreview: true,
 					hideIfEmpty: false,
 					condition: 'always',
-					compareValue: ''
+					compareValue: '',
+					customId: ''
 				},
 			}
 		};
 
-		// Add dynamicLink specifically for images
-		if (name === 'core/image') {
+		// Add dynamicLink for images and buttons
+		if (['core/image', 'core/button'].includes(name)) {
 			newAttributes.dynamicLink = {
 				type: 'object',
 				default: {
@@ -53,7 +46,8 @@
 					suffix: '',
 					dateFormat: '',
 					numberDecimals: '',
-					showPreview: true
+					showPreview: true,
+					customId: ''
 				},
 			};
 		}
@@ -75,8 +69,8 @@
 			}
 
 			// Settings
-			const dynamicTag = attributes.dynamicTag || { enable: false, source: '', key: '', fallback: '', prefix: '', suffix: '', dateFormat: '', numberDecimals: '', showPreview: true, hideIfEmpty: false, condition: 'always', compareValue: '' };
-			const dynamicLink = attributes.dynamicLink || { enable: false, source: '', key: '', fallback: '', prefix: '', suffix: '', dateFormat: '', numberDecimals: '', showPreview: true, hideIfEmpty: false, condition: 'always', compareValue: '' };
+			const dynamicTag = attributes.dynamicTag || { enable: false, source: '', key: '', fallback: '', prefix: '', suffix: '', dateFormat: '', numberDecimals: '', showPreview: true, hideIfEmpty: false, condition: 'always', compareValue: '', customId: '' };
+			const dynamicLink = attributes.dynamicLink || { enable: false, source: '', key: '', fallback: '', prefix: '', suffix: '', dateFormat: '', numberDecimals: '', showPreview: true, hideIfEmpty: false, condition: 'always', compareValue: '', customId: '' };
 
 			// UI State
 			const [isPopoverOpen, setIsPopoverOpen] = useState(false);
@@ -94,9 +88,9 @@
 			const togglePopover = () => setIsPopoverOpen(!isPopoverOpen);
 
 			// Determine current Context
-			const isLinkMode = (name === 'core/image' && activeTab === 'link');
+			const isLinkMode = (['core/image', 'core/button'].includes(name) && activeTab === 'link');
 			const currentSettings = isLinkMode ? dynamicLink : dynamicTag;
-			const hasActiveTag = dynamicTag.enable || (name === 'core/image' && dynamicLink.enable);
+			const hasActiveTag = dynamicTag.enable || (['core/image', 'core/button'].includes(name) && dynamicLink.enable);
 
 			// Function to Fetch Keys
 			const fetchMetaKeys = () => {
@@ -178,11 +172,21 @@
 				}
 
 				// 3. Sync Button Link
-				if (name === 'core/button' && dynamicTag.enable && dynamicTag.source && dynamicTag.key) {
-					apiFetch({ path: `/dynamic-tags-lite/v1/get-value?source=${dynamicTag.source}&key=${dynamicTag.key}&post_id=${postId || 0}` })
+				if (name === 'core/button' && dynamicLink.enable && dynamicLink.source && dynamicLink.key) {
+					apiFetch({ path: `/dynamic-tags-lite/v1/get-value?source=${dynamicLink.source}&key=${dynamicLink.key}&post_id=${postId || 0}&customId=${dynamicLink.customId || ''}` })
 						.then((res) => {
 							if (res.value && res.value !== attributes.url) {
 								setAttributes({ url: res.value });
+							}
+						});
+				}
+
+				// 3b. Sync Button Text
+				if (name === 'core/button' && dynamicTag.enable && dynamicTag.source && dynamicTag.key) {
+					apiFetch({ path: `/dynamic-tags-lite/v1/get-value?source=${dynamicTag.source}&key=${dynamicTag.key}&post_id=${postId || 0}&customId=${dynamicTag.customId || ''}` })
+						.then((res) => {
+							if (res.value && res.value !== attributes.text) {
+								setAttributes({ text: res.value });
 							}
 						});
 				}
@@ -341,18 +345,18 @@
 						'div',
 						{ style: { padding: '16px', minWidth: '300px' } },
 
-						(name === 'core/image') && wp.element.createElement('div', { style: { display: 'flex', borderBottom: '1px solid #eee', marginBottom: '15px', paddingBottom: '10px' } },
+						(['core/image', 'core/button'].includes(name)) && wp.element.createElement('div', { style: { display: 'flex', borderBottom: '1px solid #eee', marginBottom: '15px', paddingBottom: '10px' } },
 							wp.element.createElement(Button, {
 								isSmall: true,
 								variant: activeTab === 'content' ? 'primary' : 'tertiary',
 								onClick: () => setActiveTab('content'),
 								style: { marginRight: '10px' }
-							}, 'Image Source'),
+							}, name === 'core/button' ? 'Label Text' : 'Image Source'),
 							wp.element.createElement(Button, {
 								isSmall: true,
 								variant: activeTab === 'link' ? 'primary' : 'tertiary',
 								onClick: () => setActiveTab('link')
-							}, 'Image Link')
+							}, name === 'core/button' ? 'Link URL' : 'Image Link')
 						),
 
 						wp.element.createElement('div', { style: { fontWeight: '600', marginBottom: '12px' } },
@@ -403,6 +407,14 @@
 								value: currentSettings.key || '',
 								onChange: (val) => updateDynamicTag('key', val),
 								help: 'Type the exact meta key name from the database.'
+							}),
+
+							wp.element.createElement(TextControl, {
+								label: 'Custom Post ID',
+								placeholder: 'Enter Post ID...',
+								value: currentSettings.customId || '',
+								onChange: (val) => updateDynamicTag('customId', val),
+								help: 'Leave empty to use current post.'
 							})
 						),
 
@@ -459,7 +471,9 @@
 									{ label: 'Stock Quantity', value: 'stock_quantity' },
 									{ label: 'Average Rating', value: 'average_rating' },
 									{ label: 'Review Count', value: 'review_count' },
-									{ label: 'Add to Cart URL', value: 'add_to_cart_url' },
+									{ label: 'Add to Cart URL (Standard)', value: 'add_to_cart_url' },
+									{ label: 'Add to Cart URL (Direct)', value: 'direct_add_to_cart_url' },
+									{ label: 'Buy Now URL (Checkout)', value: 'buy_now_url' },
 									{ label: 'Product URL', value: 'product_url' },
 									{ label: 'Cart Contents Count', value: 'cart_contents_count' },
 									{ label: 'Cart Total', value: 'cart_total' },
@@ -467,6 +481,14 @@
 									{ label: 'Checkout URL', value: 'checkout_url' },
 								],
 								onChange: (val) => updateDynamicTag('key', val),
+							}),
+
+							wp.element.createElement(TextControl, {
+								label: 'Custom Product ID',
+								placeholder: 'Enter Product ID...',
+								value: currentSettings.customId || '',
+								onChange: (val) => updateDynamicTag('customId', val),
+								help: 'Leave empty to use current post/product context.'
 							})
 						),
 

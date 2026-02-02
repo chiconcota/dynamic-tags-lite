@@ -46,11 +46,12 @@ class Gutenberg_Integration {
 					'showPreview' => true,
 					'hideIfEmpty' => false,
 					'condition' => 'always',
-					'compareValue' => ''
+					'compareValue' => '',
+					'customId' => ''
 				],
 			];
 
-			if ( 'core/image' === $metadata['name'] ) {
+			if ( in_array( $metadata['name'], [ 'core/image', 'core/button' ] ) ) {
 				$settings['attributes']['dynamicLink'] = [
 					'type'    => 'object',
 					'default' => [ 
@@ -62,7 +63,8 @@ class Gutenberg_Integration {
 						'suffix' => '',
 						'dateFormat' => '',
 						'numberDecimals' => '',
-						'showPreview' => true
+						'showPreview' => true,
+						'customId' => ''
 					],
 				];
 			}
@@ -82,7 +84,7 @@ class Gutenberg_Integration {
 			// Use block context postId if available
 			$link_post_id = isset( $block['context']['postId'] ) ? $block['context']['postId'] : get_the_ID();
 			
-			$link_url = Plugin::instance()->manager->get_value( $link_setting['source'], $link_setting['key'], $link_post_id );
+			$link_url = Plugin::instance()->manager->get_value( $link_setting['source'], $link_setting['key'], $link_post_id, $link_setting );
 			
 			if ( empty( $link_url ) && ! empty( $link_setting['fallback'] ) ) {
 				$link_url = $link_setting['fallback'];
@@ -99,6 +101,22 @@ class Gutenberg_Integration {
 					} else {
 						// Wrapping img in link
 						$block_content = preg_replace( '/(<img\s+[^>]+>)/i', '<a href="' . esc_url( $link_url ) . '">$1</a>', $block_content );
+					}
+				}
+
+				if ( 'core/button' === $block['blockName'] ) {
+					// Replace href in button link
+					$block_content = preg_replace( '/href=["\']([^"\']*)["\']/i', 'href="' . esc_url( $link_url ) . '"', $block_content, 1 );
+
+					// If WooCommerce Add to Cart, add necessary AJAX classes and data attributes
+					if ( 'woocommerce' === $link_setting['source'] && strpos( $link_setting['key'], 'add_to_cart' ) !== false ) {
+						$product_id = ! empty( $link_setting['customId'] ) ? $link_setting['customId'] : $link_post_id;
+						
+						// Add classes
+						$block_content = preg_replace( '/class=["\']([^"\']*wp-block-button__link[^"\']*)["\']/i', 'class="$1 add_to_cart_button ajax_add_to_cart"', $block_content );
+						
+						// Add data-product_id and rel
+						$block_content = str_replace( '<a ', '<a data-product_id="' . esc_attr( $product_id ) . '" rel="nofollow" ', $block_content );
 					}
 				}
 			}
@@ -187,7 +205,12 @@ class Gutenberg_Integration {
 			return preg_replace( '/src="([^"]+)"/', 'src="' . esc_url( $value ) . '"', $block_content );
 		}
 
-		return $this->replace_text_content( $block_content, $value ); 
+		if ( 'core/button' === $block['blockName'] ) {
+			// Replace text inside the <a> tag specifically
+			return preg_replace( '/(<a[^>]*>)(.*)(<\/a>)/is', '$1' . esc_html( $value ) . '$3', $block_content );
+		}
+
+		return $this->replace_text_content( $block_content, $value );
 	}
 
 	/**

@@ -54,15 +54,11 @@ class Manager {
 		return rest_ensure_response( $options );
 	}
 
-	/**
-	 * Get value from source
-	 *
-	 * @param string $source
-	 * @param string $key
-	 * @param mixed  $context
-	 * @return mixed
-	 */
-	public function get_value( $source, $key, $context = null ) {
+	public function get_value( $source, $key, $context = null, $settings = [] ) {
+		if ( ! empty( $settings['customId'] ) ) {
+			$context = $settings['customId'];
+		}
+
 		if ( ! $context ) {
 			$context = get_the_ID();
 		}
@@ -205,6 +201,13 @@ class Manager {
 						return $product->get_review_count();
 					case 'add_to_cart_url':
 						return $product->add_to_cart_url();
+					case 'direct_add_to_cart_url':
+						return add_query_arg( 'add-to-cart', $product->get_id(), home_url( '/' ) );
+					case 'buy_now_url':
+						if ( function_exists( 'wc_get_checkout_url' ) ) {
+							return add_query_arg( 'add-to-cart', $product->get_id(), wc_get_checkout_url() );
+						}
+						return $product->add_to_cart_url();
 					case 'product_url':
 						return $product->get_permalink();
 				}
@@ -278,15 +281,16 @@ class Manager {
 			return new \WP_Error( 'missing_params', 'Missing source or key', [ 'status' => 400 ] );
 		}
 
-		$value = $this->get_value( $source, $key, $post_id );
-
-		// Apply formatting if requested
+		// Prepare settings
 		$settings = [
 			'prefix'         => $request->get_param( 'prefix' ),
 			'suffix'         => $request->get_param( 'suffix' ),
 			'dateFormat'     => $request->get_param( 'dateFormat' ),
 			'numberDecimals' => $request->get_param( 'numberDecimals' ),
+			'customId'       => $request->get_param( 'customId' ),
 		];
+
+		$value = $this->get_value( $source, $key, $post_id, $settings );
 
 		if ( $value !== null ) {
 			$value = $this->apply_formatting( $value, $settings );
